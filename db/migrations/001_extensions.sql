@@ -1,6 +1,6 @@
 -- Voz da Rua
--- Migration: 001_extensions.sql
--- Objetivo: habilitar extensões essenciais do banco.
+-- 001_extensions.sql
+-- Extensões essenciais.
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

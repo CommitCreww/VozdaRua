@@ -47,6 +47,26 @@ services:
     networks:
       - voz_da_rua_network
 
+
+  seed-dev:
+    image: postgis/postgis:17-3.6
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./db/seeds/dev:/seeds:ro
+      - ./scripts/seed-dev.sh:/scripts/seed-dev.sh:ro
+    entrypoint: ["/bin/bash", "/scripts/seed-dev.sh"]
+    networks:
+      - voz_da_rua_network      
+
 volumes:
   voz_da_rua_postgres_data:
 

@@ -1,6 +1,6 @@
 -- Voz da Rua
--- Migration: 002_project_metadata.sql
--- Objetivo: registrar metadados mínimos da instalação local.
+-- 002_project_metadata.sql
+-- Metadados mínimos da instalação.
 
 CREATE TABLE IF NOT EXISTS project_metadata (
     key TEXT PRIMARY KEY,

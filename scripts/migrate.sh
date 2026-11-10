@@ -3,7 +3,11 @@ set -euo pipefail
 
 echo "Aguardando PostgreSQL..."
 
-until pg_isready -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" >/dev/null 2>&1; do
+until pg_isready \
+  -h "${PGHOST}" \
+  -p "${PGPORT}" \
+  -U "${PGUSER}" \
+  -d "${PGDATABASE}" >/dev/null 2>&1; do
   sleep 1
 done
 
@@ -30,14 +34,16 @@ for file in "${migration_files[@]}"; do
   filename="$(basename "$file")"
 
   already_applied="$(
-    psql -tA \
+    psql \
+      -tA \
       -v ON_ERROR_STOP=1 \
-      -v migration_name="$filename" \
-      -c "SELECT EXISTS (
-            SELECT 1
-            FROM schema_migrations
-            WHERE filename = :'migration_name'
-          );"
+      -v migration_name="$filename" <<'SQL'
+SELECT EXISTS (
+    SELECT 1
+    FROM schema_migrations
+    WHERE filename = :'migration_name'
+);
+SQL
   )"
 
   if [ "$already_applied" = "t" ]; then
@@ -49,11 +55,16 @@ for file in "${migration_files[@]}"; do
 
   psql \
     -v ON_ERROR_STOP=1 \
-    -1 \
-    -v migration_name="$filename" \
-    -f "$file" \
-    -c "INSERT INTO schema_migrations (filename)
-        VALUES (:'migration_name');"
+    -v migration_name="$filename" <<SQL
+BEGIN;
+
+\i '$file'
+
+INSERT INTO schema_migrations (filename)
+VALUES (:'migration_name');
+
+COMMIT;
+SQL
 
   echo "OK    $filename"
 done
