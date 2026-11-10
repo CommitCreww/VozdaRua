@@ -1,0 +1,55 @@
+name: voz-da-rua
+
+services:
+  db:
+    image: postgis/postgis:17-3.6
+    container_name: voz-da-rua-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-America/Sao_Paulo}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - voz_da_rua_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - voz_da_rua_network
+
+  migrate:
+    image: postgis/postgis:17-3.6
+    container_name: voz-da-rua-db-migrate
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./db/migrations:/migrations:ro
+      - ./scripts/migrate.sh:/scripts/migrate.sh:ro
+    entrypoint: ["/bin/bash", "/scripts/migrate.sh"]
+    networks:
+      - voz_da_rua_network
+
+volumes:
+  voz_da_rua_postgres_data:
+
+networks:
+  voz_da_rua_network:
+    driver: bridge
