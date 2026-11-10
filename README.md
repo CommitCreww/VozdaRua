@@ -4,10 +4,10 @@
 
 ### Uma plataforma colaborativa para identificar, acompanhar e encaminhar problemas urbanos em São Paulo.
 
-[![Status](https://img.shields.io/badge/status-em%20defini%C3%A7%C3%A3o%20de%20produto-F5C400?style=for-the-badge&labelColor=111111)](#status-do-projeto)
-[![Cidade](https://img.shields.io/badge/cidade-S%C3%A3o%20Paulo-111111?style=for-the-badge&labelColor=F5C400)](#escopo-geogr%C3%A1fico)
-[![Idioma](https://img.shields.io/badge/idioma-pt--BR-111111?style=for-the-badge&labelColor=F5C400)](#idioma)
-[![Open Source](https://img.shields.io/badge/open%20source-em%20planejamento-111111?style=for-the-badge&labelColor=F5C400)](#licen%C3%A7a)
+[![Status](https://img.shields.io/badge/status-em%20defini%C3%A7%C3%A3o%20de%20produto-111111?style=for-the-badge&labelColor=111111)](#status-do-projeto)
+[![Cidade](https://img.shields.io/badge/cidade-S%C3%A3o%20Paulo-111111?style=for-the-badge&labelColor=111111)](#escopo-geogr%C3%A1fico)
+[![Idioma](https://img.shields.io/badge/idioma-pt--BR-111111?style=for-the-badge&labelColor=111111)](#idioma)
+[![Open Source](https://img.shields.io/badge/open%20source-em%20planejamento-111111?style=for-the-badge&labelColor=111111)](#licen%C3%A7a)
 
 **Veja o que está acontecendo perto de você.  
 Relate problemas. Confirme ocorrências. Encontre o canal certo para denunciar.**
