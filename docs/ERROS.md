@@ -79,3 +79,48 @@ Historico anterior preservado. Nenhum volume, migration, documento aprovado, ima
 | P02-A04 | Fastify avisou deprecacao do `disableRequestLogging` no nivel superior | Usado `LogController` oficial; logs de request agora registram ID/status sem URL. Testes/typecheck/build PASS |
 
 Nenhum problema da P01 foi resolvido por estas mudancas. Readiness/pool/integracao de banco nao implementados nesta autorizacao; P02 permanece parcial.
+
+## 12/11/2026 - Triagem de assinatura de imagens (preparatorio P14)
+
+| ID | Problema | Diagnostico e correcao | Resultado |
+|---|---|---|---|
+| P14-P01 | O primeiro teste parametrizado falhou com `undefined is not iterable` para o caso de bytes vazios | Vitest interpretou o array vazio como lista vazia de argumentos. Os casos foram encapsulados em objetos `{ bytes }`, sem alterar a regra de triagem | Reexecucao: 21/21 testes PASS, typecheck e build PASS |
+
+## 12/11/2026 - Bloqueio da validacao completa de imagens
+
+| ID | Problema | Diagnostico e tratamento | Estado |
+|---|---|---|---|
+| P14-P02 | Nenhuma biblioteca de decode/re-encoding aprovada nos documentos | Sharp e Jimp avaliadas sem instalacao. Selecao exige decisao tecnica e revisao de seguranca; sem decoder nao e possivel comprovar integridade, pixels ou EXIF | Pendente decisao humana; nenhum processamento novo declarado aprovado |
+| P14-P03 | Limite de 10 MB documentado sem convencao explicita de bytes | Nao fixado 10.000.000 vs 10.485.760 por inferencia | Pendente precisao do limite antes do guard de upload |
+
+## 12/11/2026 - Processador Sharp (preparatorio P14)
+
+| ID | Problema | Diagnostico e tratamento | Estado |
+|---|---|---|---|
+| P14-P04 | Primeira bateria de testes falhou: PNG com padding exatamente no limite foi aceito e fixture EXIF de orientacao ficou com valor 1 | Aceitacao do tamanho exato esta correta; ajustada expectativa. Fixture passou a usar `withMetadata({ orientation: 6 })`; reexecucao confirmou orientacao 6 na entrada e dimensoes invertidas/EXIF ausente na saida | Resolvido: Vitest 30/30 PASS |
+| P14-P05 | Biblioteca e unidade de 10 MB antes indefinidas (P14-P02/P03) | Decisoes D-IMG-01/02 aprovadas expressamente, Sharp 0.35.5 instalado com npm audit sem achados reportados | Resolvido para processamento local; limites HTTP/S3 permanecem pendentes |
+
+## 12/11/2026 - Primitivas de autenticacao D03/D04
+
+| ID | Problema | Diagnostico e tratamento | Estado |
+|---|---|---|---|
+| AUTH-P01 | Lista local inicial de senhas comuns/comprometidas cobre apenas exemplos, sem corpus revisado para producao | Contrato `CompromisedPasswordList` permite ampliar a lista sem alterar a politica; nao conectar cadastro/reset antes de revisar fonte, cobertura e atualizacao da lista | Pendente para autenticacao operacional |
+| AUTH-P02 | npm avisou que script de instalacao de `argon2` nao esta coberto por `allowScripts` | Importacao da biblioteca nativa e testes de hash/verificacao passaram no runtime local; install scripts nao foram liberados globalmente | Validar instalacao reproduzivel e supply chain no CI futuro |
+| AUTH-P03 | Gitleaks identificou `generic-api-key` na linha da denylist textual de senhas comuns | As entradas da lista local foram convertidas para fingerprints SHA-256; a comparacao da senha candidata usa hash local. Nenhum finding foi suprimido | Reexecucao Gitleaks sem achados; testes 42/42 PASS |
+
+## 12/11/2026 - Corpus e migrations preparatorias de autenticacao
+
+| ID | Problema | Diagnostico e tratamento | Estado |
+|---|---|---|---|
+| AUTH-P04 | Nome de arquivo SecLists proposto anteriormente nao existe no commit oficial atual | Usado arquivo oficial `10k-most-common.txt`, commit/blob e licença MIT verificados. Fonte possui 10.001 linhas; primeiras 10.000 selecionadas e documentadas | Resolvido com integridade verificavel |
+| AUTH-P05 | Primeira conversao PowerShell usou `Convert.ToHexString` indisponivel no PowerShell deste host | Geracao refeita com `BitConverter`, contagem e unicidade exigidas antes de gravar; nenhuma lista parcial aceita | Resolvido: 10.000 hashes distintos |
+| AUTH-P06 | Teste anterior assumia que senha sintética da denylist de oito itens constava no corpus SecLists | Teste atualizado para contagem real do corpus e bloqueio por lista injetada, sem alterar D04. Suite reexecutada | Resolvido: Vitest 42/42 PASS |
+| AUTH-P07 | CI remoto Linux e migrations SQL nao podem ser declarados aprovados por checks locais | Workflow e testes estáticos preparados; nenhuma imagem bloqueada, banco real ou runner remoto usado | Pendente execução Linux e integração PostgreSQL após liberação |
+
+## 12/11/2026 - Handlers simulados de autenticacao
+
+| ID | Problema | Diagnostico e tratamento | Estado |
+|---|---|---|---|
+| AUTH-P08 | FSD 13.8 nao lista GET de consulta de sessao | Consulta implementada somente no servico interno, sem rota HTTP inventada | Resolvido para esta entrega; eventual endpoint exige contrato aprovado |
+| AUTH-P09 | Renovacao por leitura seguida de `save` poderia sobrescrever revogacao concorrente no store futuro | Contrato substituido por `renewIfActive`, update condicional atomico exigido; mock/testes ajustados | Contrato corrigido; prova SQL real pendente |
+| AUTH-P10 | Rate limiting real, versoes legais definitivas e entrega duravel de e-mail ainda indisponiveis | Rotas nao montadas no servidor; dependencias simuladas e versoes de teste apenas para `inject` | Bloqueia promocao para auth operacional; sem alegar seguranca integrada |

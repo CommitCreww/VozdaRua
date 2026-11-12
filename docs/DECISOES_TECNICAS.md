@@ -354,6 +354,12 @@ Permanece deliberadamente não definido:
 
 Esses detalhes devem ser fechados antes de concluir o módulo de autenticação, sem alterar a decisão principal de sessão server-side.
 
+**Atualização aprovada em 12/11/2026 — D03:** o store persistente é PostgreSQL 17. O prazo de inatividade é 30 minutos, renovado por atividade válida; o limite absoluto é 12 horas e nunca é prorrogado. Login e mudanças de privilégio regeneram o identificador; não há rotação periódica adicional inicialmente. Logout invalida a sessão no servidor. Troca de senha revoga as outras sessões; banimento e rebaixamento têm efeito imediato. A lista de detalhes em aberto acima é histórico anterior a esta aprovação.
+
+**Atualização aprovada em 12/11/2026 — D04:** senhas usam Argon2id com memória de 19 MiB, 2 iterações, paralelismo 1 e salt único aleatório. Aceitar 15–128 caracteres e frases-senha; não exigir símbolos, números ou maiúsculas. Bloquear senhas comuns/comprometidas por lista local. Benchmark antes da produção. Tokens de confirmação e recuperação usam 32 bytes CSPRNG codificados para URL; persistir somente SHA-256; confirmação expira em 24 horas e recuperação em 30 minutos; consumo único e atômico, sem token em logs.
+
+**Cookie/CSRF aprovados:** cookie HttpOnly, Secure em produção, SameSite=Lax, Path=/ e sem Domain. Token CSRF sincronizado à sessão em cabeçalho nas mutações autenticadas; verificar Origin quando aplicável e compatibilidade com OAuth.
+
 
 ### 5.7 Hardening adicional de autenticação
 
@@ -2103,3 +2109,17 @@ Se houver conflito entre documentos:
 4. **DESIGN.md** define apresentação/UX quando finalizado.
 
 Nenhuma IA, ferramenta ou desenvolvedor deve preencher silenciosamente uma decisão em aberto.
+
+---
+
+## 44. Processamento de imagens — decisões D-IMG-01 a D-IMG-05
+
+Decisões aprovadas expressamente pela pessoa responsável em 12/11/2026 para o trabalho preparatório da P14:
+
+- **D-IMG-01:** usar Sharp em versão estável, mantida e compatível com Node.js 26, sujeita às verificações de segurança, para decodificação, validação e re-encodificação.
+- **D-IMG-02:** o limite de 10 MB do FSD significa **10.000.000 bytes** do arquivo recebido; rejeitar excesso.
+- **D-IMG-03:** o limite de resolução é **20.000.000 pixels**.
+- **D-IMG-04:** permitir exclusivamente JPEG, PNG e WebP, mesmo quando o decoder suporta outros formatos.
+- **D-IMG-05:** remover EXIF e metadados não necessários do arquivo processado, preservando a orientação visual correta.
+
+Essas decisões não autorizam endpoint de upload, integração S3, publicação automática nem conclusão da P14.
