@@ -14,3 +14,44 @@ Thumbs.db
 # Temporary files
 *.log
 *.tmp
+
+# Node / build / test artifacts (lockfiles remain versioned)
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+playwright-report/
+test-results/
+blob-report/
+.cache/
+
+# Private credentials and local secret stores
+.aws/
+.secrets/
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+id_rsa
+id_ed25519
+.npmrc.local
+
+# Local database / object storage / backup data
+backups/
+dumps/
+*.dump
+*.backup
+*.sql.gz
+*.sql.zip
+data/
+uploads/
+minio-data/
+postgres-data/
+
+# Project-local runtimes and private validation artifacts
+/.tools/
+/.local/

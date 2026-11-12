@@ -1,75 +1,149 @@
 name: voz-da-rua
 
+# Development only. Use an explicit --env-file and -p for isolated validation.
+# Keep the existing volume key; never run down -v against an existing project.
+x-postgis-image: &postgis-image postgis/postgis:17-3.6@sha256:1ac10b2551ba84ae05db8e7da477afcd0a3fede99bcb7705da2ee157390cb095
+x-mailpit-image: &mailpit-image axllent/mailpit:v1.33.1@sha256:aef2aacc11f075ec0fb6874275ee4a421e688e11a96ebb296134d1735c7761ce
+x-db-client: &db-client
+  image: *postgis-image
+  restart: "no"
+  profiles: ["tools"]
+  depends_on:
+    db:
+      condition: service_healthy
+  networks: [voz_da_rua_network]
+  security_opt: ["no-new-privileges:true"]
+x-migration-env: &migration-env
+  PGHOST: db
+  PGPORT: "5432"
+  PGDATABASE: ${POSTGRES_DB:?Define POSTGRES_DB in a private development env file}
+  PGUSER: ${MIGRATION_DB_USER:-vozrua_migrator}
+  PGPASSWORD: ${MIGRATION_DB_PASSWORD:?Define a separate migration password}
+  PGCONNECT_TIMEOUT: "5"
+  APP_ENV: ${APP_ENV:?Development environment must be explicit}
+
 services:
   db:
-    image: postgis/postgis:17-3.6
-    container_name: voz-da-rua-db
+    image: *postgis-image
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?Define POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?Define the bootstrap identity}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define a private bootstrap password}
       TZ: ${TZ:-America/Sao_Paulo}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - voz_da_rua_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
-        ]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
       start_period: 10s
-    networks:
-      - voz_da_rua_network
+    networks: [voz_da_rua_network]
+    security_opt: ["no-new-privileges:true"]
+
+  db-bootstrap:
+    <<: *db-client
+    environment:
+      <<: *migration-env
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      MIGRATION_DB_USER: ${MIGRATION_DB_USER:-vozrua_migrator}
+      MIGRATION_DB_PASSWORD: ${MIGRATION_DB_PASSWORD}
+      APP_DB_USER: ${APP_DB_USER:-vozrua_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Define a separate application password}
+    volumes:
+      - ./scripts:/scripts:ro
+    entrypoint: ["/bin/bash", "/scripts/db-bootstrap.sh"]
 
   migrate:
-    image: postgis/postgis:17-3.6
-    container_name: voz-da-rua-db-migrate
-    restart: "no"
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      PGHOST: db
-      PGPORT: 5432
-      PGDATABASE: ${POSTGRES_DB}
-      PGUSER: ${POSTGRES_USER}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
+    <<: *db-client
+    environment: *migration-env
     volumes:
       - ./db/migrations:/migrations:ro
-      - ./scripts/migrate.sh:/scripts/migrate.sh:ro
-    entrypoint: ["/bin/bash", "/scripts/migrate.sh"]
-    networks:
-      - voz_da_rua_network
+      - ./scripts:/scripts:ro
+    entrypoint: ["/bin/bash", "/scripts/migrate-local.sh"]
 
+  db-grants:
+    <<: *db-client
+    environment:
+      <<: *migration-env
+      APP_DB_USER: ${APP_DB_USER:-vozrua_app}
+    volumes:
+      - ./scripts:/scripts:ro
+    entrypoint: ["/bin/bash", "/scripts/db-grants.sh"]
 
-  seed-dev:
-    image: postgis/postgis:17-3.6
-    restart: "no"
-    depends_on:
-      db:
-        condition: service_healthy
+  db-app-check:
+    <<: *db-client
     environment:
       PGHOST: db
-      PGPORT: 5432
+      PGPORT: "5432"
       PGDATABASE: ${POSTGRES_DB}
-      PGUSER: ${POSTGRES_USER}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGUSER: ${APP_DB_USER:-vozrua_app}
+      PGPASSWORD: ${APP_DB_PASSWORD}
+      PGCONNECT_TIMEOUT: "5"
+    entrypoint: ["psql", "-X", "-v", "ON_ERROR_STOP=1"]
+
+  seed-dev:
+    <<: *db-client
+    profiles: ["dev-seed"]
+    environment:
+      <<: *migration-env
+      ALLOW_DEV_SEED: ${ALLOW_DEV_SEED:-false}
     volumes:
       - ./db/seeds/dev:/seeds:ro
-      - ./scripts/seed-dev.sh:/scripts/seed-dev.sh:ro
-    entrypoint: ["/bin/bash", "/scripts/seed-dev.sh"]
-    networks:
-      - voz_da_rua_network      
+      - ./scripts:/scripts:ro
+    entrypoint: ["/bin/bash", "/scripts/seed-dev-local.sh"]
+
+  mailpit-data-init:
+    image: *mailpit-image
+    restart: "no"
+    network_mode: none
+    read_only: true
+    cap_drop: ["ALL"]
+    cap_add: ["CHOWN"]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - voz_da_rua_mailpit_data:/data
+    entrypoint: ["/bin/sh", "-ec", "chown 1000:1000 /data"]
+
+  mailpit:
+    image: *mailpit-image
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m"]
+    cap_drop: ["ALL"]
+    depends_on:
+      mailpit-data-init:
+        condition: service_completed_successfully
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: "500"
+      MP_DISABLE_VERSION_CHECK: "true"
+      MP_ALLOWED_HOSTS: localhost,127.0.0.1,mailpit
+      TZ: ${TZ:-America/Sao_Paulo}
+    ports:
+      - "127.0.0.1:${MAILPIT_HTTP_PORT:-8025}:8025"
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+    volumes:
+      - voz_da_rua_mailpit_data:/data
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [voz_da_rua_network]
+    security_opt: ["no-new-privileges:true"]
 
 volumes:
   voz_da_rua_postgres_data:
+  voz_da_rua_mailpit_data:
 
 networks:
   voz_da_rua_network:
     driver: bridge
+    # Host Node/SMTP tools need replies via the bridge gateway on Docker Desktop.
+    # Published ports remain bound exclusively to 127.0.0.1; Mailpit has no relay.

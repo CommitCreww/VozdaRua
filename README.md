@@ -1,3 +1,5 @@
+> **Situação vigente — 12/11/2026:** P01 parcialmente concluída, com bloqueios de segurança das imagens e decisão de armazenamento S3; P02 parcialmente concluída nas categorias A e B, com integração real pendente. Consulte o [STATUS](docs/STATUS.md) e o [guia P01](docs/AMBIENTE_P01.md). Os registros P00 e o conteúdo de produto abaixo são históricos e não substituem as [decisões técnicas aprovadas](docs/DECISOES_TECNICAS.md), o [FSD](docs/FSD/FSD.md) e as [instruções de desenvolvimento](AGENTS.md).
+
 <div align="center">
 
 # Voz da Rua

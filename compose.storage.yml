@@ -1,0 +1,20 @@
+# OPTIONAL, BLOCKED: no reviewed MinIO image is selected (see docs/AMBIENTE_P01.md).
+# Do not use a legacy vulnerable image or an unapproved substitute.
+# Invoke explicitly with: -f compose.yml -f compose.storage.yml
+services:
+  minio:
+    image: ${MINIO_IMAGE:?Select and review a MinIO source/image before enabling storage}
+    command: ["server", "/data", "--console-address", ":9001"]
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set private MinIO bootstrap credentials}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set private MinIO bootstrap credentials}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - voz_da_rua_minio_data:/data
+    networks: [voz_da_rua_network]
+    security_opt: ["no-new-privileges:true"]
+volumes:
+  voz_da_rua_minio_data:
