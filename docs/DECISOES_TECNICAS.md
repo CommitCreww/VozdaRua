@@ -4,7 +4,7 @@
 **Versão:** 1.0 — decisões consolidadas após fechamento técnico  
 **Status:** Aprovado para orientar implementação  
 **Documento funcional de referência:** `PRD.md`  
-**Documento visual de referência:** `DESIGN.md` — separado, em elaboração por outro integrante da equipe
+**Documento visual de referência:** `DESIGN.md` 
 
 > Este documento registra as decisões técnicas aprovadas para o projeto.  
 > O PRD continua sendo a fonte de verdade das regras funcionais.  
