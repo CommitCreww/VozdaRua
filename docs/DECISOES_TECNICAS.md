@@ -4,11 +4,11 @@
 **Versão:** 1.0 — decisões consolidadas após fechamento técnico  
 **Status:** Aprovado para orientar implementação  
 **Documento funcional de referência:** `PRD.md`  
-**Documento visual de referência:** `DESIGN.md` 
+**Documento visual de referência:** `DESIGN.md` — documento vivo fornecido pela equipe
 
 > Este documento registra as decisões técnicas aprovadas para o projeto.  
 > O PRD continua sendo a fonte de verdade das regras funcionais.  
-> O `DESIGN.md` será a fonte de verdade das decisões visuais/UX quando estiver concluído.  
+> O `DESIGN.md` é a fonte de referência visual/UX; somente itens marcados como aprovados devem ser tratados como definitivos.  
 > Nenhuma tecnologia, provider ou política não registrada aqui deve ser tratada como decidida.
 
 ---
@@ -37,17 +37,22 @@ Princípios obrigatórios:
 
 | Item | Decisão |
 |---|---|
-| Linguagem | Java 25 LTS |
-| Framework | Spring Boot 4.1.2 |
-| Build | Maven + Maven Wrapper |
-| API HTTP | Spring Web |
-| Persistência | Spring Data JPA / Hibernate |
-| Validação | Bean Validation |
+| Runtime | Node.js 26 LTS |
+| Linguagem | TypeScript |
+| Framework HTTP | Fastify |
+| Build | TypeScript Compiler (`tsc`) |
+| Gerenciador de pacotes | npm com `package-lock.json` versionado |
+| API HTTP | REST/JSON com rotas/plugins do Fastify |
+| Persistência | SQL parametrizado em camada Repository |
+| Driver PostgreSQL | `pg` (node-postgres) |
 | Banco | PostgreSQL 17 |
 | Geoespacial | PostGIS 3.6 |
-| ORM espacial | Hibernate Spatial |
-| Driver | PostgreSQL JDBC |
-| Health | Spring Boot Actuator |
+| Migrations | SQL versionado existente (`scripts/migrate.sh` + `psql`) |
+| Health | endpoints próprios `/health` e `/ready` |
+
+**Diretriz:** nenhum ORM adicional é obrigatório. O schema existente e as migrations SQL continuam sendo a fonte de verdade; consultas geográficas e regras críticas devem permanecer explícitas e parametrizadas.
+
+Bibliotecas auxiliares de validação, sessão, CSRF, OAuth e rate limiting podem ser selecionadas no início de cada módulo, desde que sejam mantidas, compatíveis com Fastify, passem pelo Security Gate e não alterem as decisões funcionais.
 
 ### 2.2 Frontend
 
@@ -97,62 +102,104 @@ Portanto:
 Estrutura de referência:
 
 ```text
-br.com.vozdarua
-├── config
-├── controller
-├── dto
-├── entity
-├── exception
-├── repository
-├── security
-└── service
+backend/
+├── src/
+│   ├── app.ts
+│   ├── server.ts
+│   ├── config/
+│   ├── routes/
+│   ├── controllers/
+│   ├── services/
+│   ├── repositories/
+│   ├── schemas/
+│   ├── plugins/
+│   ├── hooks/
+│   ├── security/
+│   ├── integrations/
+│   ├── errors/
+│   └── types/
+├── tests/
+├── package.json
+├── package-lock.json
+└── tsconfig.json
 ```
 
-### 3.1 Controller
+A organização é inspirada em MVC, adaptada a uma API REST com frontend React separado:
+
+- **Model:** banco PostgreSQL/PostGIS, repositories e tipos do domínio;
+- **View:** frontend React/PWA;
+- **Controller:** controllers acionados pelas rotas Fastify;
+- **Service:** regras de negócio e transações entre Controller e Repository.
+
+### 3.1 Routes
+
+Responsáveis por:
+
+- declarar método e caminho HTTP;
+- registrar plugins/hooks necessários;
+- encaminhar para controller;
+- não conter regra de negócio.
+
+### 3.2 Controller
 
 Responsável por:
 
 - receber request;
-- validar formato inicial;
+- ler parâmetros já validados;
 - chamar services;
-- devolver DTO/response;
-- aplicar contratos HTTP.
+- transformar resultado em resposta HTTP;
+- não executar SQL diretamente.
 
-Não deve concentrar regra de negócio.
-
-### 3.2 Service
+### 3.3 Service
 
 Responsável por:
 
 - regras de negócio;
 - autorização contextual;
 - transações;
-- validações que dependem do domínio;
+- validações dependentes do domínio;
 - orquestração entre repositories e integrações.
 
-### 3.3 Repository
+### 3.4 Repository
 
 Responsável por:
 
 - persistência;
-- consultas;
+- SQL parametrizado;
+- consultas PostGIS;
 - filtros;
-- PostGIS;
 - agregações.
 
-### 3.4 DTO
+Não concatenar input do usuário em SQL.
 
-Usar DTOs para entrada e saída.
+### 3.5 Schemas / validação de entrada
 
-Não expor entity JPA diretamente como contrato público.
+Responsáveis por:
 
-### 3.5 Entity
+- validar shape, tipo, tamanho e enum de requests;
+- rejeitar campos inesperados quando isso reduzir risco de mass assignment;
+- não substituir validações de regra de negócio no Service.
 
-Representa persistência e relacionamentos.
+A biblioteca concreta de schema validation não é uma decisão fechada neste documento.
 
-A Entity não substitui as regras do Service.
+### 3.6 Plugins e hooks
 
----
+Responsáveis por preocupações transversais do Fastify:
+
+- autenticação;
+- autorização;
+- CSRF;
+- rate limiting;
+- correlation/request ID;
+- tratamento de erro;
+- upload;
+- segurança HTTP.
+
+### 3.7 Separação entre tipos e contratos
+
+Não expor diretamente linhas brutas do banco como contrato público.
+
+Responses e requests devem possuir tipos/DTOs explícitos em TypeScript, evitando vazamento acidental de campos internos.
 
 ## 4. Banco e migrations
 
@@ -168,15 +215,13 @@ pgcrypto
 
 ### 4.2 Regra de schema
 
-Hibernate não cria nem altera o schema de produção.
-
-Usar:
-
-```text
-ddl-auto: validate
-```
+O backend Node.js **não cria nem altera automaticamente o schema** em runtime.
 
 As migrations SQL versionadas permanecem a fonte de verdade.
+
+O acesso ao banco deve respeitar o schema existente, e a aplicação deve falhar de forma clara quando uma migration obrigatória estiver ausente.
+
+Não adotar `sync`, auto-migration de ORM ou criação implícita de tabela em produção.
 
 ### 4.3 Migrations existentes
 
@@ -236,40 +281,44 @@ A numeração exata das migrations seguintes poderá ser definida no momento da 
 
 ### 5.1 Estratégia aprovada
 
-**Sessão server-side com Spring Security.**
+**Sessão server-side com cookie seguro em Fastify.**
 
-O navegador manterá apenas o identificador necessário em cookie seguro.
+O navegador mantém apenas o identificador de sessão necessário em cookie.
 
-Não utilizar JWT armazenado em:
+Não utilizar token de autenticação em:
 
 - `localStorage`;
 - `sessionStorage`.
 
-### 5.2 Requisitos obrigatórios de cookie
+A implementação pode usar plugin de sessão compatível com Fastify. O mecanismo exato de persistência das sessões ainda não foi fixado; store de sessão somente em memória **não pode ser usado em produção**.
+
+### 5.2 Requisitos obrigatórios do cookie
 
 Em produção:
 
 - `HttpOnly`;
 - `Secure`;
 - `SameSite` apropriado ao fluxo;
-- escopo/path restrito conforme necessário.
+- path/escopo restrito;
+- expiração coerente com a política de sessão.
 
 ### 5.3 Proteções de sessão
 
 Obrigatório:
 
 - proteção CSRF em operações mutáveis;
-- renovação do identificador da sessão após login;
+- renovação/regeneração do ID de sessão após login;
 - renovação após mudança de privilégio;
-- invalidação real server-side no logout;
-- timeout de sessão;
+- invalidação server-side no logout;
+- timeout;
 - proteção contra session fixation;
 - proteção contra session hijacking;
-- rate limiting nos fluxos de autenticação.
+- rate limiting em login, cadastro, reenvio de confirmação e recuperação;
+- `trustProxy` configurado corretamente no Fastify atrás do Nginx antes de confiar em cookies `Secure` e IP do cliente.
 
 ### 5.4 Métodos de autenticação
 
-Confirmados funcionalmente:
+Confirmados:
 
 - conta Voz da Rua;
 - Google;
@@ -281,15 +330,104 @@ Conta local:
 
 Conta externa:
 
-- quando o provider fornecer e-mail já verificado, não será necessária segunda confirmação pelo Voz da Rua.
+- quando o provider fornecer e-mail já verificado, não será necessária segunda confirmação.
 
-### 5.5 Detalhe ainda não fixado
+### 5.5 OAuth/OIDC
 
-A forma exata de persistência/distribuição das sessões poderá ser definida na implementação.
+A implementação deve validar:
 
-Não considerar Redis, JDBC Session ou outra solução como aprovada sem decisão posterior caso se torne necessária.
+- `state`;
+- `nonce` quando aplicável;
+- callback/redirect URI permitido;
+- issuer/audience quando o protocolo exigir;
+- associação segura entre identidade externa e conta local.
 
----
+A biblioteca concreta de OAuth não deve ser escolhida por conveniência sem passar pelo Security Gate.
+
+### 5.6 Detalhe ainda não fixado
+
+Permanece deliberadamente não definido:
+
+- storage de sessão em produção;
+- duração exata da sessão;
+- política exata de renovação contínua.
+
+Esses detalhes devem ser fechados antes de concluir o módulo de autenticação, sem alterar a decisão principal de sessão server-side.
+
+
+### 5.7 Hardening adicional de autenticação
+
+Além das proteções já definidas, o módulo de autenticação deve incorporar:
+
+#### Rate limiting multicamada
+
+Aplicar limites independentes, quando aplicável, por:
+
+- IP/origem;
+- conta/e-mail normalizado;
+- sessão autenticada;
+- endpoint/ação.
+
+Endpoints mínimos:
+
+```text
+POST /auth/login
+POST /auth/register
+POST /auth/password/forgot
+POST /auth/email/resend
+```
+
+Outros endpoints de escrita também devem ter limites coerentes com custo e risco.
+
+Não depender apenas de IP, pois ataques distribuídos podem usar múltiplas origens.
+
+#### Cooldown progressivo
+
+Falhas consecutivas de autenticação devem aumentar progressivamente o tempo até nova tentativa permitida.
+
+Preferir:
+
+```text
+falha
+→ contador/janela
+→ cooldown
+→ resposta 429 quando bloqueado
+```
+
+Evitar manter requisições abertas artificialmente apenas para "atrasar" o atacante.
+
+#### Account lockout inteligente
+
+- bloqueio temporário, nunca permanente automático;
+- cooldown progressivo;
+- impedir que terceiro cause bloqueio permanente de uma conta;
+- registrar evento de segurança quando limiares relevantes forem atingidos;
+- resposta não deve facilitar enumeração de contas.
+
+#### MFA
+
+Política aprovada:
+
+```text
+CIDADÃO
+→ MFA opcional
+
+MODERADOR
+→ MFA obrigatório antes de operar em produção
+
+ADMIN
+→ MFA obrigatório antes de operar em produção
+```
+
+Método preferencial:
+
+```text
+WebAuthn / Passkeys / FIDO2
+```
+
+Evitar SMS como fator principal quando existir opção resistente a phishing.
+
+A implementação de recuperação de MFA deve receber revisão humana reforçada e não pode introduzir bypass mais fraco que o próprio MFA.
 
 ## 6. PWA
 
@@ -609,7 +747,7 @@ A PWA utilizará Service Worker para receber as notificações.
 
 ### 13.3 Backend
 
-O Spring Boot gerenciará subscriptions autorizadas.
+O backend Node.js gerenciará subscriptions autorizadas.
 
 ### 13.4 Segurança
 
@@ -707,7 +845,7 @@ Nginx
 Produção conterá os serviços necessários ao MVP, incluindo:
 
 - frontend React/PWA;
-- backend Spring Boot;
+- backend Node.js/Fastify;
 - PostgreSQL/PostGIS;
 - MinIO;
 - observabilidade aprovada.
@@ -794,7 +932,7 @@ Grafana
 +
 Loki
 +
-Spring Boot Actuator
+endpoints de health/readiness do backend Node.js
 ```
 
 ### 18.2 Não adotado inicialmente
@@ -819,16 +957,28 @@ A observabilidade deve permitir acompanhar pelo menos:
 - erros de e-mail/push;
 - comportamento técnico necessário à operação.
 
-### 18.4 Actuator
+### 18.4 Health e readiness
 
-Não expor publicamente endpoints sensíveis como:
+O backend deve expor:
 
-- env;
-- beans;
-- config;
-- heap dump.
+```text
+GET /health
+GET /ready
+```
 
----
+`/health` indica que o processo está vivo.
+
+`/ready` verifica se a instância está apta a atender, incluindo dependências essenciais definidas para o runtime, como banco.
+
+Esses endpoints:
+
+- não expõem variáveis de ambiente;
+- não listam secrets;
+- não retornam stack trace;
+- não exibem configuração interna;
+- podem ter detalhamento restrito à rede/admin quando necessário.
+
+Métricas mais completas que exijam datasource próprio no Grafana permanecem para evolução futura, já que Prometheus não foi adotado no MVP.
 
 ## 19. Retenção de logs
 
@@ -1056,9 +1206,9 @@ N/A
 
 ### C. Injection, execução e saída insegura
 
-- [ ] **SEC-021** — SQL/JPQL/native queries usam parâmetros; nunca concatenar input em consulta.
+- [ ] **SEC-021** — Queries SQL usam parâmetros/bindings; nunca concatenar input em consulta.
 - [ ] **SEC-022** — Sort, coluna, nome de tabela ou fragmentos estruturais dinâmicos usam allowlist fixa.
-- [ ] **SEC-023** — Entrada do usuário nunca é passada diretamente a shell, Runtime.exec ou ProcessBuilder sem necessidade e allowlist.
+- [ ] **SEC-023** — Entrada do usuário nunca é passada diretamente a shell ou APIs de `node:child_process` (`exec`, `execFile`, `spawn`) sem necessidade, allowlist e revisão.
 - [ ] **SEC-024** — Não executar código, script, expressão ou template vindo de usuário/arquivo externo.
 - [ ] **SEC-025** — Prevenir XSS armazenado escapando/encodando saída conforme contexto.
 - [ ] **SEC-026** — Prevenir DOM XSS: não inserir texto não confiável via innerHTML/dangerouslySetInnerHTML sem sanitização revisada.
@@ -1095,7 +1245,7 @@ N/A
 
 ### F. Validação, lógica de negócio, concorrência e fail-open
 
-- [ ] **SEC-051** — Bean Validation valida formato/tamanho, mas regras de negócio também são verificadas no Service.
+- [ ] **SEC-051** — Schema validation valida formato/tamanho, mas regras de negócio também são verificadas no Service.
 - [ ] **SEC-052** — Regra de 3 km é recalculada no backend/PostGIS; valor de distância vindo do cliente é ignorado como autoridade.
 - [ ] **SEC-053** — Limite municipal é validado no backend contra polígono oficial, não pelo texto cidade=São Paulo.
 - [ ] **SEC-054** — Duplicidade de 100 m é apenas candidata; não permitir que cliente force fusão/duplicidade.
@@ -1137,7 +1287,7 @@ N/A
 - [ ] **SEC-081** — Toda nova dependência sugerida por IA deve existir de fato e ser verificada no repositório oficial antes de instalar (anti-slopsquatting).
 - [ ] **SEC-082** — Preferir dependências mantidas, conhecidas e necessárias; evitar pacote para função trivial.
 - [ ] **SEC-083** — Lockfiles são obrigatórios e versionados para frontend e ferramentas.
-- [ ] **SEC-084** — Dependências Maven/Node são verificadas por SCA antes do merge.
+- [ ] **SEC-084** — Dependências npm/Node são verificadas por SCA antes do merge.
 - [ ] **SEC-085** — Dependência com CVE Critical/High bloqueia merge salvo exceção documentada e temporária.
 - [ ] **SEC-086** — GitHub Actions de terceiros devem ser oficiais/confiáveis e versões devem ser fixadas de forma controlada.
 - [ ] **SEC-087** — Imagens de container devem usar tags suportadas e passar por scan de CVE/misconfiguration.
@@ -1154,7 +1304,7 @@ N/A
 - [ ] **SEC-095** — Chamadas externas possuem timeout, retry limitado com backoff e circuit breaker quando necessário.
 - [ ] **SEC-096** — Erros inesperados nunca retornam stack trace, SQL, caminhos internos ou segredo ao cliente.
 - [ ] **SEC-097** — Falhas de autorização, login suspeito e ações administrativas relevantes são auditadas e alertáveis.
-- [ ] **SEC-098** — Health/Actuator não expõe env, beans, config, heap ou detalhes internos publicamente.
+- [ ] **SEC-098** — Endpoints de health/readiness não expõem env, config, heap, stack ou detalhes internos publicamente.
 - [ ] **SEC-099** — Feature que altera dados críticos deve verificar impacto em backup/restauração e migrations reversíveis/recuperáveis.
 - [ ] **SEC-100** — Antes de produção, executar teste de abuso/segurança específico da feature e confirmar que alertas/monitoramento conseguem detectar falhas relevantes.
 
@@ -1164,16 +1314,18 @@ N/A
 
 ### 24.1 Backend
 
-Decisão aprovada:
+Adaptação da decisão de testes para Node.js:
 
-- JUnit 5;
-- Spring Boot Test;
-- MockMvc;
-- Testcontainers com PostgreSQL/PostGIS;
+- Vitest como runner de testes TypeScript;
+- `fastify.inject()` para testes HTTP do Fastify;
+- Testcontainers for Node com PostgreSQL/PostGIS;
 - testes de Repository;
+- testes de Service;
 - testes de autorização;
-- testes das regras críticas;
+- testes de regras críticas;
 - testes de concorrência/unicidade onde necessário.
+
+Os testes devem usar banco PostgreSQL/PostGIS real em container quando a regra depender de SQL, constraint ou função espacial. Não substituir PostGIS por mock em testes que validem distância/geométrica.
 
 ### 24.2 Frontend
 
@@ -1185,12 +1337,12 @@ Decisão aprovada:
 
 ### 24.3 Segurança automatizada
 
-Decisão aprovada:
+Decisão aprovada, adaptada à stack Node:
 
-- GitHub CodeQL;
+- GitHub CodeQL para JavaScript/TypeScript;
 - Semgrep;
-- OWASP Dependency-Check;
-- auditoria de dependências npm;
+- OWASP Dependency-Check quando aplicável ao lockfile/SBOM;
+- `npm audit`;
 - Trivy;
 - Gitleaks;
 - Dependabot;
@@ -1200,9 +1352,11 @@ Decisão aprovada:
 
 Para merge:
 
-- build passa;
+- `npm ci` funciona;
+- build TypeScript passa;
+- lint/typecheck definidos pelo projeto passam;
 - testes passam;
-- migration sobe em banco limpo;
+- migrations sobem em banco limpo;
 - zero segredo detectado;
 - Critical bloqueia;
 - High bloqueia por padrão;
@@ -1235,8 +1389,6 @@ Obrigatória quando a feature alterar:
 - geolocalização/regra espacial;
 - código de segurança.
 
----
-
 ## 25. Dependências e supply chain
 
 ### 25.1 Dependências sugeridas por IA
@@ -1251,14 +1403,14 @@ Antes de instalar:
 
 ### 25.2 Versionamento
 
-Frontend:
+Frontend e backend Node:
 
-- lockfile obrigatório e versionado.
+- `package-lock.json` obrigatório e versionado;
+- instalação em CI com `npm ci`;
+- evitar ranges excessivamente permissivos em dependências críticas;
+- runtime Node deve permanecer em linha LTS suportada.
 
-Maven:
-
-- dependências definidas explicitamente conforme estratégia do projeto;
-- não adicionar dependência sem propósito claro.
+Não adicionar dependência sem propósito claro.
 
 ### 25.3 Atualizações
 
@@ -1278,33 +1430,35 @@ Não fazer auto-merge indiscriminado de:
 
 Toda feature deve considerar explicitamente ataques de injeção.
 
-### 26.1 SQL / JPQL / native query
+### 26.1 SQL / queries dinâmicas
 
 Obrigatório:
 
-- bind parameters;
-- parâmetros nomeados/posicionais;
-- nenhuma concatenação de input em SQL/JPQL.
+- queries parametrizadas pelo driver PostgreSQL;
+- nenhuma concatenação/interpolação de input em SQL;
+- valores dinâmicos enviados como parâmetros.
 
-Quando estrutura for dinâmica, como ordenação:
+Elementos estruturais que não podem ser parametrizados, como coluna de ordenação:
 
-- usar allowlist;
-- nunca aceitar nome arbitrário de coluna/tabela vindo do cliente.
+- usar allowlist fixa;
+- mapear valor público para identificador interno conhecido;
+- nunca aceitar nome arbitrário de coluna/tabela enviado pelo cliente.
 
 ### 26.2 Command injection
 
-Não passar input de usuário diretamente para:
+Não passar input do usuário diretamente a:
 
-- shell;
-- `Runtime.exec`;
-- `ProcessBuilder`.
+- `child_process.exec`;
+- `child_process.execFile`;
+- `child_process.spawn`;
+- shell.
 
-Caso alguma execução externa seja realmente necessária:
+Caso uma execução externa seja realmente necessária:
 
 - justificar;
-- usar allowlist;
-- evitar shell intermediário;
-- limitar argumentos;
+- preferir não usar shell;
+- usar argumentos separados;
+- aplicar allowlist;
 - revisar no Security Gate.
 
 ### 26.3 XSS
@@ -1580,6 +1734,153 @@ Mesmo host físico, porém:
 
 ---
 
+
+## 36.5 Segmentação de rede e menor privilégio
+
+A infraestrutura deve adotar segmentação compatível com o tamanho do MVP.
+
+Objetivo:
+
+```text
+Internet
+↓
+Nginx
+↓
+Frontend / Backend
+
+Backend
+↓
+PostgreSQL
+MinIO
+```
+
+Regras:
+
+- Internet não acessa PostgreSQL diretamente;
+- Internet não acessa MinIO diretamente;
+- frontend não acessa PostgreSQL;
+- frontend não acessa credenciais internas do MinIO;
+- Nginx não recebe privilégio desnecessário sobre banco;
+- serviços de observabilidade devem ter apenas os acessos necessários.
+
+Quando útil, separar redes Docker por função, por exemplo:
+
+```text
+edge
+data
+observability
+```
+
+Sem criar complexidade de microsserviços desnecessária.
+
+### 36.6 Princípio do menor privilégio — PoLP
+
+Obrigatório:
+
+- backend não usar superusuário PostgreSQL;
+- migrations podem usar identidade separada com privilégios maiores;
+- credencial da aplicação deve ter somente permissões necessárias;
+- credencial MinIO do backend deve ser restrita aos buckets/ações necessárias;
+- containers não devem rodar como `privileged`;
+- evitar execução como root quando tecnicamente possível;
+- não montar Docker socket no container da aplicação;
+- remover Linux capabilities desnecessárias quando possível;
+- filesystem read-only deve ser considerado para containers que não precisam escrever localmente;
+- segredos devem ser fornecidos apenas aos serviços que realmente os usam.
+
+### 36.7 Zero Trust como princípio
+
+A rede interna não concede confiança implícita.
+
+```text
+origem interna
+≠
+autorização
+```
+
+Toda operação sensível continua validando:
+
+- autenticação;
+- status da conta;
+- papel;
+- ownership;
+- contexto da operação.
+
+O MVP **não exige** uma implantação enterprise de Zero Trust com service mesh, mTLS entre todos os containers ou identidade criptográfica por workload. Esses controles poderão ser avaliados futuramente se a arquitetura justificar.
+
+
+## 36.8 Redução de fingerprinting
+
+Adotar hardening de exposição de tecnologia:
+
+- ocultar versões do Nginx;
+- não enviar headers desnecessários de framework/runtime;
+- não expor stack traces;
+- não expor caminhos internos;
+- não expor versões de bibliotecas em mensagens de erro;
+- remover banners desnecessários de serviços administrativos.
+
+Esse controle é complementar e não substitui patching, SCA, autorização, WAF ou correções de vulnerabilidade.
+
+## 36.9 WAF antes do lançamento público
+
+O projeto deve possuir uma etapa de avaliação/implantação de Web Application Firewall antes do lançamento público.
+
+Abordagem:
+
+```text
+staging
+→ detection/logging
+→ análise de falsos positivos
+→ tuning
+→ testes E2E + ZAP
+→ blocking em produção
+```
+
+O WAF deve ser tratado como camada adicional, nunca como substituto de validação server-side.
+
+Regras genéricas, como OWASP Core Rule Set ou solução equivalente, podem ser usadas desde que sejam validadas contra:
+
+- JSON;
+- uploads;
+- coordenadas;
+- descrição livre;
+- comentários;
+- Social;
+- endpoints de autenticação.
+
+A solução WAF específica permanece uma decisão operacional futura.
+
+## 36.10 Cyber deception — escopo deliberado
+
+No MVP:
+
+**não adotar:**
+
+- honeypot público na mesma VPS de produção;
+- banco/SSH/porta falsa exposta propositalmente;
+- arquivo `.env` falso ou credencial falsa espalhada no repositório/host;
+- tarpits que mantenham conexões deliberadamente abertas;
+- rotação periódica de portas como mecanismo de segurança.
+
+Motivos:
+
+- aumento de superfície operacional;
+- risco de falso positivo;
+- risco de confusão operacional;
+- possibilidade de amplificar DoS;
+- baixo benefício comparado aos controles principais.
+
+**futuro opcional:**
+
+Honeytokens/canary tokens sem privilégio podem ser avaliados futuramente, desde que:
+
+- não concedam acesso real;
+- possam ser revogados;
+- gerem evento de segurança de alta prioridade;
+- não contaminem CI/secret scanning;
+- não sejam confundidos com credenciais reais.
+
 ## 37. Gestão de secrets
 
 Não versionar:
@@ -1612,6 +1913,33 @@ rotacionar o segredo
 Somente apagar do commit não resolve o incidente.
 
 ---
+
+
+### 37.1 Rotação de segredos
+
+Todo segredo deve possuir estratégia de rotação.
+
+Rotação imediata é obrigatória quando houver:
+
+- vazamento;
+- suspeita de comprometimento;
+- exposição em log;
+- commit acidental;
+- acesso indevido ao ambiente.
+
+Segredos relevantes:
+
+- segredo de sessão;
+- credenciais MinIO;
+- Postmark;
+- OAuth;
+- VAPID;
+- credenciais de deploy;
+- credenciais de banco.
+
+Rotação periódica pode ser adotada conforme criticidade e capacidade operacional.
+
+Não utilizar rotação frequente de portas como substituto de rotação de credenciais.
 
 ## 38. Git e Pull Requests
 
@@ -1652,13 +1980,56 @@ Uma feature só está concluída quando:
 
 ---
 
+
+## 39.1 Regra obrigatória de testes por feature
+
+Toda feature, implementação, correção ou alteração de comportamento executável deve criar ou atualizar os testes aplicáveis **na mesma entrega**.
+
+Regra:
+
+```text
+FEATURE SEM TESTE APLICÁVEL
+=
+FEATURE INCOMPLETA
+```
+
+A exigência mínima é:
+
+- teste unitário quando houver lógica isolável;
+- teste HTTP via `fastify.inject()` quando alterar endpoint/contrato;
+- teste de integração quando houver banco, PostGIS, migration ou integração relevante;
+- teste negativo/de abuso quando houver regra de segurança ou autorização.
+
+Correção de bug:
+
+```text
+reproduzir com teste
+→ teste falha
+→ corrigir
+→ teste passa
+```
+
+Pode ser marcado como `N/A` somente quando realmente não houver comportamento executável testável, por exemplo:
+
+- documentação;
+- ativo estático;
+- mudança visual puramente cosmética;
+- alteração sem lógica.
+
+O `N/A` deve ser justificado no Pull Request.
+
+Mudanças de migration não são dispensadas: devem possuir validação em banco limpo e teste de integração quando aplicável.
+
+Testes criados pela mesma IA que implementou a feature não são evidência suficiente por si só. Casos negativos devem ser derivados das regras de negócio, critérios de aceite e Security Gate, e mudanças sensíveis continuam exigindo revisão humana.
+
 ## 40. Decisões fechadas — resumo
 
 | Tema | Decisão aprovada |
 |---|---|
+| Backend | Node.js 26 LTS + TypeScript + Fastify |
 | Frontend | React + TypeScript + Vite |
 | Design | `DESIGN.md` separado, em elaboração pelo outro integrante |
-| Sessão | server-side + Spring Security + cookie seguro |
+| Sessão | server-side em Fastify + cookie seguro |
 | Mapas | MapLibre GL JS |
 | Tiles/geocoding | MapTiler |
 | Autoridade geográfica | PostgreSQL/PostGIS |
@@ -1670,13 +2041,21 @@ Uma feature só está concluída quando:
 | Homologação | mesma VPS, ambientes isolados |
 | Produção | VPS Hostinger + Docker Compose + Nginx |
 | CI/CD | GitHub Actions |
-| Observabilidade | Grafana + Loki + Actuator |
+| Observabilidade | Grafana + Loki + `/health` e `/ready` |
 | Logs | 7d aplicação / 30d segurança / 90d auditoria |
 | Backup | local na própria VPS no MVP |
 | Limite municipal | polígono oficial + PostGIS |
 | Reabertura | status `REABERTA` |
 | Testes | stack completa/equilibrada aprovada |
 | Security Gate | SEC-001..SEC-100 obrigatório por feature |
+| Hardening de autenticação | rate limit multicamada + cooldown + lockout inteligente |
+| MFA | opcional cidadão / obrigatório moderador e admin antes de produção |
+| MFA preferencial | WebAuthn / Passkeys / FIDO2 |
+| Rede | segmentação Docker + PoLP |
+| Zero Trust | adotado como princípio, sem stack enterprise obrigatória |
+| WAF | requisito de hardening antes do lançamento público, com tuning |
+| Cyber deception | honeytokens futuros opcionais; honeypot/tarpit/.env falso fora do MVP |
+| Testes por feature | obrigatórios na mesma entrega |
 
 ---
 
@@ -1686,7 +2065,7 @@ Não considerar decididos apenas por ausência de detalhe:
 
 - conteúdo do `DESIGN.md`;
 - SMTP vs API para Postmark;
-- mecanismo exato de persistência da sessão server-side;
+- mecanismo exato de persistência da sessão server-side em produção;
 - detalhes finais de certificado/TLS no Nginx;
 - rotina/ferramenta específica do backup local;
 - futuros providers alternativos;
