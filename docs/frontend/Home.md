@@ -1,7 +1,7 @@
 # Home — Perto de você
 
 > **Estado:** especificação de design para revisão; referência visual inspecionada. Não autoriza implementação antes da aprovação.  
-> **Fontes:** [levantamento funcional](../PRD/prd.md), especialmente §§ 2, 3, 5, 7, 10, 19 e 24; [Design System](Desing-rules.md); [referência mobile dark](assets/home-mobile-dark.png). Decisões técnicas e segurança complementam as regras. A imagem é direcional, não define medidas exatas nem elimina requisitos.
+> **Fontes:** [levantamento funcional](../PRD/prd.md), especialmente §§ 2, 3, 5, 7, 10, 19 e 24; [Design System](Design.md); [referência mobile dark](assets/home-mobile-dark.png). Decisões técnicas e segurança complementam as regras. A imagem é direcional, não define medidas exatas nem elimina requisitos.
 
 **Legenda:** **REQUISITO** = levantamento funcional; **DESIGN APROVADO** = solicitação ou referência; **PROPOSTA** = recomendação a validar; **PENDENTE** = decisão necessária. Exemplos da imagem não constituem dados reais nem categorias aprovadas.
 

@@ -15,7 +15,7 @@ Documentos lidos integralmente para o planejamento:
 | Decisões técnicas | [DECISOES_TECNICAS.md](DECISOES_TECNICAS.md) | Referência obrigatória de tecnologias e políticas técnicas |
 | FSD | [FSD/FSD.md](FSD/FSD.md), versão 1.4 | Contratos, regras detalhadas, critérios de aceite e pendências |
 | DESIGN | `docs/DESIGN.md` ausente | Não presumir documento final nem criar substituto |
-| Referências visuais disponíveis | [frontend/Desing-rules.md](frontend/Desing-rules.md) e [frontend/Home.md](frontend/Home.md) | Ler estados APROVADO/PROPOSTO/PENDENTE; Home está em revisão |
+| Referências visuais disponíveis | [frontend/Design.md](frontend/Design.md) e [frontend/Home.md](frontend/Home.md) | Ler estados APROVADO/PROPOSTO/PENDENTE; Home está em revisão |
 | Instruções de agentes | [AGENTS.md](../AGENTS.md) existente, vazio | Preenchimento previsto em P00, após aprovação |
 | Segurança | [FSD/SECURITY_GATE_100.md](FSD/SECURITY_GATE_100.md) | SEC-001–100 e extensão SEC-101–125 |
 
