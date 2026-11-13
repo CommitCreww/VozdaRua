@@ -124,3 +124,12 @@ Nenhum problema da P01 foi resolvido por estas mudancas. Readiness/pool/integrac
 | AUTH-P08 | FSD 13.8 nao lista GET de consulta de sessao | Consulta implementada somente no servico interno, sem rota HTTP inventada | Resolvido para esta entrega; eventual endpoint exige contrato aprovado |
 | AUTH-P09 | Renovacao por leitura seguida de `save` poderia sobrescrever revogacao concorrente no store futuro | Contrato substituido por `renewIfActive`, update condicional atomico exigido; mock/testes ajustados | Contrato corrigido; prova SQL real pendente |
 | AUTH-P10 | Rate limiting real, versoes legais definitivas e entrega duravel de e-mail ainda indisponiveis | Rotas nao montadas no servidor; dependencias simuladas e versoes de teste apenas para `inject` | Bloqueia promocao para auth operacional; sem alegar seguranca integrada |
+
+## 13/11/2026 - Frontend B01
+
+| ID | Problema | Diagnóstico e tratamento | Estado |
+|---|---|---|---|
+| FE-P01 | Referências documentais antigas apontavam para `docs/frontend/Desing.md`, enquanto os arquivos vigentes estão em `docs/Design/` | Leitura e implementação usaram os caminhos confirmados por PREPARACAO e pelo catálogo real; não foram criadas cópias divergentes | Resolvido para esta entrega; referências históricas permanecem |
+| FE-P02 | Backend não monta auth e não possui contrato operacional para bootstrap de sessão/CSRF | B01 ficou sem cliente HTTP; nenhuma área autenticada foi liberada e nenhum token foi persistido no navegador | Pendente; bloqueia integração real |
+| FE-P03 | Textos/versões jurídicos definitivos não existem | Cadastro operacional e aceites permanecem desabilitados; nenhuma política fictícia foi publicada | Pendente D07; bloqueia cadastro real |
+| FE-P04 | Vitest/Vite falharam dentro do sandbox porque esbuild não conseguiu ler a árvore necessária para carregar `vite.config.ts` | Testes e build foram repetidos com autorização fora do sandbox | Resolvido: 41/41 testes, typecheck e build PASS no recorte final B01 |

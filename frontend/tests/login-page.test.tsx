@@ -44,9 +44,11 @@ describe('Tela inicial de acesso', () => {
 
   it('mantém ações dependentes de integração desabilitadas', () => {
     render(<LoginPage />);
-    for (const name of ['Entrar', 'Google', 'GitHub', 'Esqueceu a senha?', 'Criar conta']) {
+    for (const name of ['Entrar', 'Google', 'GitHub']) {
       expect(screen.getByRole('button', { name: new RegExp(`^${name.replace('?', '\\?')}$`, 'i') })).toHaveProperty('disabled', true);
     }
     expect(screen.getByRole('status').textContent).toContain('indisponível');
+    expect(screen.getByRole('link', { name: 'Criar conta' }).getAttribute('href')).toBe('/cadastro');
+    expect(screen.getByRole('link', { name: 'Esqueceu a senha?' }).getAttribute('href')).toBe('/recuperar-acesso');
   });
 });

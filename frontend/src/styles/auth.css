@@ -99,3 +99,26 @@ button:disabled { cursor: not-allowed; opacity: .68; }
   .availability-note { margin-top: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+a { color: var(--color-accent); text-underline-offset: 4px; }
+a:focus-visible, .form-feedback:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 4px; border-radius: 4px; }
+a.primary-button { text-decoration: none; text-align: center; padding: 12px 16px; }
+button:not(:disabled) { cursor: pointer; }
+.support-action a, .auth-footer a { display: inline-flex; align-items: center; min-height: 44px; }
+.back-link { display: inline-flex; gap: 8px; align-items: center; min-height: 44px; margin: -12px 0 18px; font-size: .875rem; }
+.secondary-link { display: flex; justify-content: center; align-items: center; min-height: 44px; margin-top: 20px; text-align: center; font-size: .875rem; }
+.field-hint { color: var(--color-text-muted); font-size: .8125rem; line-height: 1.6; margin: 8px 0 0; }
+.social-note { text-align: center; margin-top: 12px; }
+.availability-banner { text-align: left; border-left: 3px solid var(--color-accent); background: var(--color-surface-input); padding: 12px 16px; border-radius: 4px 12px 12px 4px; margin: -8px 0 24px; line-height: 1.6; }
+.form-feedback { margin: 0 0 24px; padding: 16px; border: 1px solid var(--color-border); border-radius: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.form-feedback p { margin: 0; }
+.form-feedback a { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; }
+.is-success { border-left: 4px solid var(--color-accent); }
+.success-actions { display: grid; gap: 20px; }
+.success-actions .back-link { margin: 0; justify-content: center; }
+.legal-consents { margin: 24px 0; }
+.consent-row { display: flex; gap: 12px; align-items: flex-start; margin-top: 12px; font-size: .875rem; line-height: 1.65; }
+.consent-row input { flex: none; width: 22px; height: 22px; margin: 10px 0; accent-color: var(--color-accent); }
+.consent-row label { padding: 8px 0; min-height: 44px; }
+.consent-row a { text-decoration-thickness: 1px; }
