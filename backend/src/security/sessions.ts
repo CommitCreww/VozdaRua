@@ -14,7 +14,8 @@ export interface SessionStore {
   findByIdHash(idHash: string): Promise<StoredSession | null>;
   // Atomic conditional update: fail if revoked or either timeout elapsed at update time.
   renewIfActive(idHash: string, now: Date): Promise<StoredSession | null>;
-  save(session: StoredSession): Promise<void>;
+  // Lock the account and compare the credential used at login, against concurrent reset.
+  save(session: StoredSession, expectedPasswordHash: string): Promise<boolean>;
   revoke(idHash: string, at: Date): Promise<void>;
   revokeOtherSessions(accountId: string, exceptIdHash: string, at: Date): Promise<void>;
   revokeAllForAccount(accountId: string, at: Date): Promise<void>;

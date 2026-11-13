@@ -49,9 +49,10 @@ describe('processamento isolado de imagens', () => {
 
   it('remove EXIF e corrige orientacao visual', async () => {
     const source = await sharp({ create: { width: 8, height: 6, channels: 3, background: '#195f86' } })
-      .jpeg().withMetadata({ orientation: 6 }).withExif({ Exif: { UserComment: 'synthetic' } }).toBuffer();
+      .jpeg().withMetadata({ orientation: 6 }).withExif({ IFD0: { ImageDescription: 'synthetic' } }).toBuffer();
     const inputMeta = await sharp(source).metadata();
     expect(inputMeta.orientation).toBe(6);
+    expect(inputMeta.exif).toBeDefined();
     const result = await processImage(source);
     expect(result).toMatchObject({ width: 6, height: 8 });
     const outputMeta = await sharp(result.bytes).metadata();

@@ -10,12 +10,22 @@ export interface DatabasePort extends SqlExecutor {
   close(): Promise<void>;
 }
 
+export interface TransactionalSqlExecutor extends SqlExecutor {
+  transaction<T>(work: (sql: SqlExecutor) => Promise<T>): Promise<T>;
+}
+
+export interface PoolClientLike {
+  query(sql: string, values?: unknown[]): Promise<{ rows: unknown[] }>;
+  release(destroy?: boolean): void;
+}
+
 export interface PoolLike {
   query(sql: string, values?: unknown[]): Promise<{ rows: unknown[] }>;
   end(): Promise<void>;
+  connect?(): Promise<PoolClientLike>;
 }
 
-export function createDatabase(config: DatabaseConfig, suppliedPool?: PoolLike): DatabasePort {
+export function createDatabase(config: DatabaseConfig, suppliedPool?: PoolLike): DatabasePort & TransactionalSqlExecutor {
   const pool: PoolLike = suppliedPool ?? new Pool({
     host: config.host,
     port: config.port,
@@ -31,6 +41,37 @@ export function createDatabase(config: DatabaseConfig, suppliedPool?: PoolLike):
     async query<Row>(sql: string, values?: readonly unknown[]) {
       const result = await pool.query(sql, values ? [...values] : undefined);
       return result.rows as Row[];
+    },
+    async transaction<T>(work: (sql: SqlExecutor) => Promise<T>): Promise<T> {
+      if (!pool.connect) throw new Error('Transaction connection unavailable');
+      const client = await pool.connect();
+      let destroy = false;
+      let started = false;
+      let active = true;
+      const executor: SqlExecutor = {
+        async query<Row>(sql: string, values?: readonly unknown[]) {
+          if (!active) throw new Error('Transaction already finished');
+          const result = await client.query(sql, values ? [...values] : undefined);
+          return result.rows as Row[];
+        }
+      };
+      try {
+        await client.query('BEGIN');
+        started = true;
+        const value = await work(executor);
+        active = false;
+        await client.query('COMMIT');
+        return value;
+      } catch (error) {
+        active = false;
+        if (started) {
+          try { await client.query('ROLLBACK'); } catch { destroy = true; }
+        } else destroy = true;
+        throw error;
+      } finally {
+        active = false;
+        client.release(destroy);
+      }
     },
     async check() {
       await pool.query('SELECT 1');

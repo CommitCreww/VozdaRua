@@ -181,3 +181,46 @@ Fontes para vetores e correcoes: [advisories MariaDB](https://github.com/MariaDB
 ### Gate e decisao final
 
 Atendidos: PostgreSQL 17/PostGIS 3.6/pgcrypto, 17 migrations limpas e idempotentes, rollback de falha, menor privilegio, seed apenas dev, SMTP local, persistencia de banco/e-mail, isolamento loopback e volumes originais preservados (evidencias 24/24 da secao anterior). **Nao atendidos:** MinIO privado operante com bucket/credencial restrita e testes S3; imagem PostgreSQL/PostGIS sem High aplicavel ou excecao formal; revisao humana dos findings para promocao; scan Trivy/CI nao executados nesta fase. Pelo PLANO P01 item 7 e DT/Security Gate SEC-085/087/110, **P01 continua parcialmente concluida**. Nenhuma excecao foi aprovada nesta execucao. P02 nao iniciada.
+
+## 12/11/2026 — Reconstrução controlada de libxml2 e Trivy
+
+Pedido específico autoriza remediar a imagem experimental e executar integração somente após os gates. Os registros anteriores descrevem suas próprias execuções. A consulta ao tracker Debian e ao APT trixie confirmou candidato `2.12.7+dfsg+really2.9.14-2.1+deb13u3`, ainda afetado. A correção oficial aparece em forky/sid, enquanto o retroporte local mantém a base trixie. [Tracker Debian](https://security-tracker.debian.org/tracker/CVE-2026-86140)
+
+### Artefatos produzidos
+
+Receita controlada em `infra/postgis-experimental/`, com base local fixada no digest `sha256:b428b8d42cdc28321f0dce4a9fbccd4f306f8da07aa4e5dd26b188a1d47123f1`, source Debian exato, checksum de patch, aplicação `--fuzz=0`, metadados Debian e separação builder/runtime. APT usa fontes trixie assinadas e os repositórios já presentes na base.
+
+| Imagem experimental | Digest OCI local | Versões incorporadas |
+|---|---|---|
+| `voz-da-rua-p01-postgis:libxml2-review` reinstalada sem cache a partir do pacote preexistente | `sha256:bd229af70bf055f204130f302cb85416e2e53a7bc97d7b8f48d2911fedeb1cac` | PG 17.12, PostGIS 3.6.4, libxml2 `2.12.7+dfsg+really2.9.14-2.1+deb13u3+vozrua1` |
+| `voz-da-rua-p01-postgis:libxml2-source-review` reconstruída nesta sessão pelo source Debian | `sha256:bc918a934e61985d08a51406d1d7e753a7d15e3206dd0f0923d75923e76c2893` | Mesmas versões, gosu 1.19 com Go 1.26.9 herdado |
+
+O patch local corresponde ao commit GNOME `d1686f91dbda141a752200419d35639fd6b38340`. SHA-256 local `6f3e6bd911a1b0d58ebad1ff752e2302f9e8b92ec32c7461774aa998c1a2b3c0`. A entrega GitHub tem SHA-256 `5e51f8dcadfe3294a15d9e8644d61e8d92bd5b9e72c10cf13ef010eccfbfa4df` por diferença de comprimento dos hashes index e trailer GitLab. A comparação dos hunks confirmou identidade, hash `449cc7a8a9dfa8207f7a5a75e1a88c8d62f61b86f1bd16a85b7169363f679aca`. Aplicação no source ocorreu com offsets e sem fuzz. [Commit GNOME](https://github.com/GNOME/libxml2/commit/d1686f91dbda141a752200419d35639fd6b38340)
+
+Pacote recompilado com SHA-256 `c592f32a81d5a303d07cadfe4f908c477fcb10f87c7a74ccc572bad7684c8ce2`. Artefatos em `.local/pg-unblock-source-artifacts/` incluem `.deb`, `.dsc`, `.buildinfo`, `.changes`, `valid-patched.c`, `SHA256SUMS`, política APT e `build.log`. O empacotamento pulou testes no alvo indep. A etapa explícita posterior `make check` falhou com **508 testes, 1 erro, 0 leaks** reportados, envolvendo fixtures `test/threads/*.xml` ausentes. Tentativas de links/cópia de fixtures e pré-condição `test -f test/threads/abc.xml` também falharam. A receita atual bloqueia runtime após falha nessa validação. A tag `libxml2-source-verified` não foi produzida. Validar a integridade/disponibilidade dessas fixtures e um teste de regressão específico da CVE continua pendente.
+
+### Comparação Trivy
+
+Trivy **0.76.2**, arquivo oficial de checksums conferido para o ZIP local. DB com `UpdatedAt=2026-11-12T18:57:38Z`, mesmo cache nas comparações. Scans usaram `--scanners vuln`, sem ignorefile ou filtro de findings corrigidos. O exit code 0 indica conclusão do scan e o gate foi avaliado pelos findings.
+
+| Artefato | Critical por pacote/CVE | High por pacote/CVE | CVEs distintas Critical/High | Relatório novo |
+|---|---|---|---|---|
+| Base experiment-flat | 5 | 167 | 62 | `.local/pg-unblock-before-trivy.json` |
+| Candidato inicial com patch, digest `66d230d0...` antes da reinstalação sem cache | 5 | 167 | 62 | `.local/pg-unblock-after-trivy.json` |
+| Candidato reconstruído source-review `bc918a93...` | 5 | 167 | 62 | `.local/pg-unblock-source-trivy.json` |
+
+Os 2 Critical/18 High do Scout anterior e os valores Trivy têm fontes/severidades/cobertura diferentes. A comparação entre ferramentas exige considerar cada CVE. Todos os relatórios anteriores foram preservados. Matriz de **todas as 62 CVEs distintas**, pacotes/títulos e estado de triagem em `.local/pg-unblock-triage.json`, gerada do scan final.
+
+### Revisão dos bloqueios remanescentes
+
+| Finding | Avaliação atual |
+|---|---|
+| CVE-2026-86140, High, libxml2 | Patch presente no source compilado, mas Trivy continua reportando pela versão. Validação completa do retroporte pendente, sem supressão ou declaração de ausência comprovada |
+| CVE-2026-6653, Critical, libxml2 | UAF em `xmlParseInternalSubset`, afetando também o source Debian baseado em 2.9.14. O patch de `xmlSnprintfElements` não cobre essa falha. Potencialmente alcançável pelo parser XML, bloqueante. [Debian](https://security-tracker.debian.org/tracker/CVE-2026-6653) |
+| CVE-2026-44172, Critical em libmariadb3 e mariadb-common | Advisory inclui escaping big5 no conector cliente. A classificação anterior sobre ausência de servidor MariaDB não resolve essa CVE nova. Exige correção ou prova de não alcance. [Debian](https://security-tracker.debian.org/tracker/CVE-2026-44172) |
+| CVE-2026-49261, Critical nos mesmos dois pacotes | Vetor `wsrep_notify_cmd` exige servidor/Galera, ausentes conforme inventário anterior. Mantido reportado e pendente de revisão formal. [Debian](https://security-tracker.debian.org/tracker/CVE-2026-49261) |
+| CVE-2026-73515, High em PostGIS e scripts | Decoder FlatGeobuf vulnerável em versões anteriores à correção. Existe commit de correção stable-3.6 `767fa40644253281f6d4e8b06811489b0a0f9b0d`. Verificar pacote ou retroporte na linha 3.6. [Debian](https://security-tracker.debian.org/tracker/CVE-2026-73515) |
+| CVE-2026-111943, High no gosu/stdlib Go 1.26.9 | Fix Go 1.26.10 ou 1.27.3. Aplicabilidade depende de `crypto/x509.Certificate.Verify` no binário, ainda não demonstrada. Finding permanece aberto. [Go](https://pkg.go.dev/vuln/GO-2026-6809) |
+| Demais High | Incluem outras libxml2, krb5, GDAL, Expat, curl, util-linux, ACL, CFITSIO, ncurses, Perl, SQLite, systemd e TIFF. Os 62 registros completos permanecem bloqueantes até remediação ou triagem com evidência. A análise antiga de seis CVEs krb5 não abrange automaticamente os 14 IDs por pacote encontrados agora |
+
+**Gate da imagem FAIL.** PostgreSQL não foi inicializado nesta tarefa. Migrations 001–020, oito testes SQL, concorrência login/reset e persistência após restart aguardam esse gate. Repositories continuam validados localmente com simulações. O registro operacional de auth depende ainda de rate limiting/cooldown persistentes, intenção durável de e-mail, auditoria e revisões aplicáveis. Próxima prioridade é tratar o UAF Critical da libxml2 e a correção stable-3.6 do PostGIS, completar validação da biblioteca e reavaliar toda a matriz Trivy. P01/P02 continuam parciais.

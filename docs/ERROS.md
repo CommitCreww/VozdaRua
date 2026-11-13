@@ -149,3 +149,43 @@ Nenhum problema da P01 foi resolvido por estas mudancas. Readiness/pool/integrac
 | FE-V05 | Paisagem aparecia como faixa retangular separada e painel ocupava largura total no desktop | Gradientes de transição no contêiner da paisagem; painel limitado a 560 px e centralizado, mantendo o asset e tokens existentes | Resolvido nas seis capturas Chrome; validação física ainda pendente |
 | FE-V06 | Campos e provedores não tinham ícones da referência | Ícones SVG decorativos para e-mail, cadeado, olho, Google e GitHub; labels preservados e erros associados por ARIA | Resolvido: inspeção visual, axe-core sem violações reportadas e Vitest 5/5 |
 | FE-V07 | Em 320 px com texto ampliado a 200%, nome do provedor GitHub era cortado | Grupo social passou a permitir quebra em duas linhas quando a largura do conteúdo exigir | Resolvido: captura `zoom-200.png` sem corte e sem overflow horizontal |
+
+## 12/11/2026 - Sprint de backend: persistência e recuperação
+
+| ID | Problema / impacto | Tratamento e evidência | Estado |
+|---|---|---|---|
+| SPRINT-BE-01 | Vitest no sandbox Windows voltou a falhar em spawn EPERM, sem executar testes | Reexecutado com subprocessos autorizados; baseline 47 PASS e suíte final 74 PASS/8 skipped | Resolvido localmente; não é evidência de CI Linux |
+| SPRINT-BE-02 | Login anterior retornava sucesso independentemente da persistência de sessão e poderia concorrer com reset de senha | `save` retorna booleano, compara hash atual sob lock de usuário compartilhado com reset; Service nega 401 sem cookie. Regressão reproduzida intencionalmente: comportamento antigo produziu 200; correção passou | Resolvido em contrato/SQL e testes locais; corrida SQL real aguarda P01 |
+| SPRINT-BE-03 | `npm view` dentro do sandbox não acessou registro (ENOTCACHED); flags extras via wrapper npm foram interpretadas como config | Registro oficial consultado com acesso autorizado/TLS verificado. Testes executados diretamente pelo Node 26/Vitest local | Resolvido; sem desabilitar TLS ou alterar configuração global |
+| SPRINT-BE-04 | Testcontainers 12.2.1 traz 7 alertas moderados transitivos de dev (glob/minimatch e cadeia archiver/testcontainers) e aviso glob deprecated | Audit completo 0 High/Critical, produção 0 reportadas. Advisories GHSA-3g3m-2fjr-6pw4 e GHSA-g3hv-75wg-m249. npm sugere downgrade major 10.10.4 via force; não aplicado nem suprimido | Pendente atualização/revisão compatível do tooling; não é aprovação de ausência de vulnerabilidades |
+| SPRINT-BE-05 | `npm ci` avisa install scripts de argon2/protobufjs/ssh2 não cobertos por allowScripts | Cópia isolada instalada e smoke Argon2id/Sharp/import Testcontainers PASS; sem aprovar scripts globalmente | CI Linux/build nativo alternativo/integração Docker pendentes |
+| SPRINT-BE-06 | Typecheck anterior cobria só src, escondendo chave EXIF inválida em fixture de teste Sharp | Novo tsconfig.tests.json; fixture usa IFD0/ImageDescription e verifica EXIF da entrada; typecheck de fontes/testes e suíte PASS | Resolvido |
+| SPRINT-BE-07 | Banco/imagens P01 continuam bloqueados; SQL novo não pode ser declarado validado por mocks | 8 testes reais preparados e skipped; allowlist vazia recusa digest bloqueado antes de iniciar container. Migration 020/grants somente preparados/checados estaticamente | Bloqueia validação operacional P04–P06 e montagem de rotas; sem executar imagem impedida |
+| SPRINT-BE-08 | Persistir hash e chamar porta de e-mail depois não garante intenção durável; rate gate e auditoria ainda não operacionais | Mantidas rotas fora de app/server; falhas de entrega/SQL retornam erro genérico nos testes. Nenhuma outbox/transporte/regra nova escolhida silenciosamente | Gate de operação permanece aberto; implementar persistência durável/limites/auditoria após contratos e infraestrutura aplicáveis |
+
+Migrations 001–019 e decisões aprovadas não foram alteradas. Nenhum serviço/volume/imagem existente foi iniciado, removido ou promovido. Gates SEC detalhados em [SECURITY_SPRINT_BACKEND.md](SECURITY_SPRINT_BACKEND.md); testes simulados e import de biblioteca não aprovam concorrência/persistência PostgreSQL nem entrega SMTP/S3.
+
+## 12/11/2026 — Reconstrução PostgreSQL/libxml2
+
+| ID | Problema e impacto | Tratamento e estado |
+|---|---|---|
+| PG-INT-01 | APT trixie ainda oferece libxml2 vulnerável à CVE-2026-86140 | Source exato recompilado com patch GNOME, sem fuzz. Pacote e candidata source-review construídos, validação completa pendente |
+| PG-INT-02 | SHA do patch GitHub difere do arquivo GitLab local | Diff confirmou apenas abreviações index e trailer. Hunks idênticos, SHA e comparação preservados em `.local/pg-unblock-patch-verification.json`. Resolvido quanto à origem do código |
+| PG-INT-03 | Empacotamento Debian pulou testes no alvo indep | Acrescentado make check obrigatório. Falhou com 508 testes, 1 erro, 0 leaks e entidades test/threads ausentes. Links e cópia não resolveram, pré-condição de abc.xml falhou. Bloqueia validação da biblioteca e tag source-verified |
+| PG-INT-04 | Trivy encontra 5 Critical/167 High, abrangendo 62 CVEs distintas | Scans da base e candidata source-review concluídos, todos os findings preservados. Libxml2 UAF Critical e PostGIS FlatGeobuf High requerem correções adicionais. Gate FAIL, integração SQL não liberada |
+| PG-INT-05 | Dois testes backend deram timeout durante carga paralela do build | Reexecução com um worker e mesmo timeout passou 74 testes, 8 skipped. Código de aplicação e timeouts preservados |
+| PG-INT-06 | Sandbox negou acesso inicial ao Docker pipe | Inspeção/build/scans executados com acesso autorizado. Resolvido para a tarefa |
+| PG-INT-07 | Formato customizado de docker buildx history usou campo ID inexistente | Comando repetido no formato padrão, progresso confirmado. Resolvido sem alteração de serviços |
+
+Scans novos, logs de build e artefatos ficam em `.local/pg-unblock-*`. Matriz completa e revisão dos Critical/High em [REMEDIACAO_P01.md](REMEDIACAO_P01.md). O erro de fixtures não foi classificado como aprovação dos testes nem usado para dispensar os findings de segurança.
+
+## 13/11/2026 — Avaliação da imagem mantida PostGIS 3.7
+
+| ID | Problema e impacto | Evidência e tratamento | Estado |
+|---|---|---|---|
+| POC37-01 | Tag oficial 17-3.7 mantém findings bloqueantes da base e acrescenta runtime Go antigo | Digest `1f0d64ef...` baixado e escaneado antes de execução. Trivy 6 Critical/191 High, 87 CVEs distintas; baseline local 3.6 reescaneada no mesmo DB, 5/167 e 62 distintas. +25 CVEs, zero removidas | Gate FAIL, recomendação CORRIGIR |
+| POC37-02 | UAF CVE-2026-6653 permanece na libxml2 de trixie | Inventário libxml2 2.12.7+dfsg+really2.9.14-2.1+deb13u3 confrontado com tracker Debian. Parser XML potencialmente aplicável; correções forky/sid não autorizam misturar distribuições | Bloqueia inicialização e oito testes SQL |
+| POC37-03 | Trivy reporta CVE-2026-73515 em PostGIS 3.7.0 apesar da faixa upstream corrigida | Preservados os dois findings em pacote e scripts. Tracker aponta fix anterior à release instalada. Exige reconciliação do source PGDG/faixa Debian | Triagem aberta, sem supressão |
+| POC37-04 | gosu traz stdlib Go 1.24.6, com 26 findings High/Critical | Inclui CVE-2025-68121 Critical; versões corrigidas por finding registradas no resumo. Alcance funcional no gosu não comprovado | Rebuild mantido/corrigido e triagem pendentes |
+
+Relatórios e metadados em `.local/poc37-*`, detalhes comparativos em STATUS. A PoC foi interrompida no gate anterior à execução conforme autorização condicional. Nenhum banco existente acessado ou container/volume alterado. A compatibilidade e as migrations 001–020 permanecem sem medição na 3.7.

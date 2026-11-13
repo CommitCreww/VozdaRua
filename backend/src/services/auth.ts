@@ -6,7 +6,7 @@ import { isSessionValid, type SessionStore, type StoredSession } from '../securi
 
 export interface LocalAccount extends CurrentAccount {
   email: string;
-  passwordHash: string;
+  passwordHash: string | null;
   emailVerifiedAt: Date | null;
 }
 export interface AuthRepository {
@@ -14,12 +14,12 @@ export interface AuthRepository {
   findById(id: string): Promise<LocalAccount | null>;
   // Atomic account + legal acceptances + hashed token. Delivery durability remains a P06 integration gate.
   register(input: { name: string; email: string; passwordHash: string; termsVersion: string; privacyVersion: string; tokenHash: string; expiresAt: Date }): Promise<boolean>;
-  enqueueVerification(email: string, tokenHash: string, expiresAt: Date): Promise<void>;
+  enqueueVerification(email: string, tokenHash: string, expiresAt: Date): Promise<boolean>;
   // Atomic token consumption and account confirmation; false for expired/used/missing token.
   confirmEmail(tokenHash: string, now: Date): Promise<boolean>;
 }
 export interface AuthRateGate {
-  check(action: 'register' | 'resend' | 'login', origin: string, email: string): Promise<boolean>;
+  check(action: 'register' | 'resend' | 'login' | 'forgot' | 'reset', origin: string, identity: string): Promise<boolean>;
   recordFailure(action: 'login', origin: string, email: string): Promise<void>;
 }
 export interface AuthDependencies {
@@ -50,8 +50,9 @@ export function createAuthService(deps: AuthDependencies) {
       const account = await deps.accounts.findByEmail(email);
       if (account && !canIssueLocalSession(account.emailVerifiedAt)) {
         const token = generateAccountToken();
-        await deps.accounts.enqueueVerification(email, hashAccountToken(token), new Date(deps.now().getTime() + TOKEN_TTL_MS.EMAIL_VERIFICATION));
-        await deps.verification.queue(email, token);
+        if (await deps.accounts.enqueueVerification(email, hashAccountToken(token), new Date(deps.now().getTime() + TOKEN_TTL_MS.EMAIL_VERIFICATION))) {
+          await deps.verification.queue(email, token);
+        }
       }
       return { status: 'ok', value: undefined };
     },
@@ -62,17 +63,18 @@ export function createAuthService(deps: AuthDependencies) {
     async login(email: string, password: string, origin: string): Promise<AuthResult<{ sessionId: string; csrfToken: string; account: CurrentAccount }>> {
       if (!await deps.rate.check('login', origin, email)) return { status: 'limited' };
       const account = await deps.accounts.findByEmail(email);
-      if (!account || !await verifyPassword(account.passwordHash, password)) {
+      if (!account?.passwordHash || !await verifyPassword(account.passwordHash, password)) {
         await deps.rate.recordFailure('login', origin, email);
         return { status: 'unauthorized' };
       }
       if (!canIssueLocalSession(account.emailVerifiedAt)) return { status: 'unverified' };
       const current = await deps.accounts.findById(account.id);
-      if (!current || !canIssueLocalSession(current.emailVerifiedAt)) return { status: 'unauthorized' };
+      if (!current || current.passwordHash !== account.passwordHash || !canIssueLocalSession(current.emailVerifiedAt)) return { status: 'unauthorized' };
       const sessionId = randomBytes(32).toString('base64url');
       const csrfToken = randomBytes(32).toString('base64url');
       const now = deps.now();
-      await deps.sessions.save({ idHash: digest(sessionId), accountId: current.id, csrfTokenHash: digest(csrfToken), createdAt: now, lastActivityAt: now, revokedAt: null });
+      const saved = await deps.sessions.save({ idHash: digest(sessionId), accountId: current.id, csrfTokenHash: digest(csrfToken), createdAt: now, lastActivityAt: now, revokedAt: null }, account.passwordHash);
+      if (!saved) return { status: 'unauthorized' };
       return { status: 'ok', value: { sessionId, csrfToken, account: { id: current.id, role: current.role, status: current.status } } };
     },
     async current(sessionId: string): Promise<{ session: StoredSession; account: CurrentAccount } | null> {

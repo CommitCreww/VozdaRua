@@ -31,7 +31,7 @@ function setup() {
         tokens.set(input.tokenHash, { email: input.email, expiresAt: input.expiresAt, used: false });
         return true;
       },
-      async enqueueVerification(email, hash, expiresAt) { tokens.set(hash, { email, expiresAt, used: false }); },
+      async enqueueVerification(email, hash, expiresAt) { tokens.set(hash, { email, expiresAt, used: false }); return true; },
       async confirmEmail(hash, at) {
         const token = tokens.get(hash);
         if (!token || token.used || at >= token.expiresAt) return false;
@@ -51,7 +51,7 @@ function setup() {
         sessions.set(id, renewed);
         return renewed;
       },
-      async save(session) { sessions.set(session.idHash, session); },
+      async save(session) { sessions.set(session.idHash, session); return true; },
       async revoke(id, at) { const session = sessions.get(id); if (session) sessions.set(id, { ...session, revokedAt: at }); },
       async revokeOtherSessions() {}, async revokeAllForAccount() {}, async replaceId(oldId, session) { sessions.delete(oldId); sessions.set(session.idHash, session); }
     }
