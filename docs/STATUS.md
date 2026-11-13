@@ -205,3 +205,10 @@ Validacao efetiva: **6/6 testes Vitest PASS** (`fastify.inject` para liveness, I
 - `SessionStore.renewIfActive` passou a exigir renovacao atomica condicionada a validade/revogacao, evitando salvar estado obsoleto em futura implementacao SQL. Mock cobre comportamento, sem provar atomicidade real. `backend/src/app.ts` e `server.ts` seguem sem autenticacao operacional.
 - Vitest 47/47 PASS, typecheck/build PASS, `npm audit --audit-level=high` reportou zero vulnerabilidades. Testes cobrem cadastro valido/invalido/duplicado, confirmacao valida/expirada/reutilizada, reenvio e rate gate simulado, login valido/invalido/nao confirmado/BANIDO, flags de cookie, CSRF/Origin no logout, expiracao e estado atual. Sem banco, envio externo, deploy, commit ou push.
 - Bloqueios: rate limiting/cooldown persistentes apenas por interface; versoes/textos legais definitivos pendentes D07; entrega de e-mail duravel ainda nao demonstrada; controle de timing antienumeracao, cookies/OAuth em ambiente real, CSRF em demais mutacoes, migrations 018/019 e store PostgreSQL reais, revisao humana de auth. P01/P02 parciais e P04-P06 nao concluidas.
+
+## Consolidação documental de frontend — 12/11/2026
+
+- Entrega documental autorizada pelo usuário, independente das fases executáveis: Design v0.4 e registro anterior reunidos em frontend/Design.md; Home preservada; referências reunidas em frontend/references e assets preservados.
+- Navegação Social versus Mapa permanece pendente de conciliação; alternativas de moderação não escolhidas. Imagens de Home homônimas e diferentes foram preservadas em pastas distintas.
+- Comparados hashes das cópias antes de remover duplicatas. Testes de aplicação não se aplicam; não houve alteração executável. AGENTS.md mantém referência ao nome antigo, protegido contra escrita.
+

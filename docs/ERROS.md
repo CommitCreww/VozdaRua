@@ -124,3 +124,9 @@ Nenhum problema da P01 foi resolvido por estas mudancas. Readiness/pool/integrac
 | AUTH-P08 | FSD 13.8 nao lista GET de consulta de sessao | Consulta implementada somente no servico interno, sem rota HTTP inventada | Resolvido para esta entrega; eventual endpoint exige contrato aprovado |
 | AUTH-P09 | Renovacao por leitura seguida de `save` poderia sobrescrever revogacao concorrente no store futuro | Contrato substituido por `renewIfActive`, update condicional atomico exigido; mock/testes ajustados | Contrato corrigido; prova SQL real pendente |
 | AUTH-P10 | Rate limiting real, versoes legais definitivas e entrega duravel de e-mail ainda indisponiveis | Rotas nao montadas no servidor; dependencias simuladas e versoes de teste apenas para `inject` | Bloqueia promocao para auth operacional; sem alegar seguranca integrada |
+
+## Consolidação visual — 12/11/2026
+
+- **Pendente:** AGENTS.md aponta para frontend/Desing.md, renomeado por solicitação do usuário para frontend/Design.md. Impacto: link quebrado nas instruções; arquivo protegido contra escrita nesta sessão. Consultar PREPARACAO para o caminho vigente e corrigir AGENTS quando permitido.
+- **Pendente:** Design v0.4 apresenta Mapa na navegação como aprovado; Home e Design anterior apresentam Social. Impacto: navegação afetada não deve ser implementada como decisão reconciliada; divergência preservada em Design.md para decisão de UX.
+

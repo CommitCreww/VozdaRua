@@ -9,7 +9,7 @@
 | PRD | [PRD/prd.md](PRD/prd.md) |
 | Decisões técnicas | [DECISOES_TECNICAS.md](DECISOES_TECNICAS.md) |
 | FSD 1.4 | [FSD/FSD.md](FSD/FSD.md) |
-| Referência visual disponível | [frontend/Desing.md](frontend/Desing.md) |
+| Referência visual disponível | [frontend/Design.md](frontend/Design.md) |
 | Home em revisão | [frontend/Home.md](frontend/Home.md) |
 | Security Gate e extensão | [FSD/SECURITY_GATE_100.md](FSD/SECURITY_GATE_100.md) |
 | Plano de 34 fases | [PLANO.md](PLANO.md) |
@@ -18,7 +18,7 @@
 
 Não existe arquivo físico nos caminhos curtos `docs/PRD.md`, `docs/FSD.md` ou `docs/DESIGN.md`. Os conteúdos foram localizados nas subpastas acima. Não foram criadas cópias, aliases ou renomeações de documentos aprovados.
 
-O PLANO e a Home ainda referenciam o nome antigo `Desing-rules.md`. Usar `frontend/Desing.md` para consulta. A autorização desta entrega proíbe alterar documentos aprovados; os dois links antigos permanecem registrados em ERROS para correção documental posterior autorizada. A existência de direção visual aprovada não transforma tokens, ativos e navegação pendentes em decisões finais.
+A documentação visual foi consolidada em `frontend/Design.md` e `frontend/references/`; a Home mantém sua especificação própria. O AGENTS.md ainda cita o nome anterior e precisa ser atualizado quando permitido. A existência de direção visual aprovada não transforma tokens, ativos e navegação pendentes em decisões finais.
 
 ## Estrutura preparada
 
