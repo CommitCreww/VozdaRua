@@ -124,3 +124,28 @@ Nenhum problema da P01 foi resolvido por estas mudancas. Readiness/pool/integrac
 | AUTH-P08 | FSD 13.8 nao lista GET de consulta de sessao | Consulta implementada somente no servico interno, sem rota HTTP inventada | Resolvido para esta entrega; eventual endpoint exige contrato aprovado |
 | AUTH-P09 | Renovacao por leitura seguida de `save` poderia sobrescrever revogacao concorrente no store futuro | Contrato substituido por `renewIfActive`, update condicional atomico exigido; mock/testes ajustados | Contrato corrigido; prova SQL real pendente |
 | AUTH-P10 | Rate limiting real, versoes legais definitivas e entrega duravel de e-mail ainda indisponiveis | Rotas nao montadas no servidor; dependencias simuladas e versoes de teste apenas para `inject` | Bloqueia promocao para auth operacional; sem alegar seguranca integrada |
+
+## 12/11/2026 - Fundação frontend preparatória
+
+| ID | Problema | Diagnóstico e tratamento | Estado |
+|---|---|---|---|
+| FE-P01 | Primeira validação falhou por ausência de `@types/node` e contaminação entre renders dos testes | Incluídos tipos Node no lockfile e `cleanup` após cada teste; consultas de botões tornadas exatas | Resolvido: typecheck, 3/3 testes e build PASS |
+| FE-P02 | Logo aprovado existia apenas como PNG de referência com cerca de 1,3 MB | Convertido localmente para WebP de 192 px e 13 KB, preservando o ativo de origem | Resolvido para a tela preparatória; validação visual final pendente |
+| FE-P03 | Tentativa de captura headless com Chrome local não produziu arquivo | Vite iniciou em loopback; Chrome retornou sem captura. A validação visual não foi declarada aprovada | Pendente verificação visual em navegador/dispositivo |
+
+## 12/11/2026 - Validação visual da tela de login
+
+| ID | Problema | Diagnóstico e tratamento | Estado |
+|---|---|---|---|
+| FE-V01 | Painel produzia 11 px de rolagem vertical desnecessária em tablet/desktop | `min-height` fixado com altura superior incorreta; ajustado para mínimo automático em telas largas e espaçamentos do conteúdo | Resolvido: 768×1024 e 1440×900 sem rolagem extra no Chrome |
+| FE-V02 | “Esqueceu a senha?” avançava 6 px além do limite do formulário | Margem negativa do botão removida, preservando área de toque e alinhamento | Resolvido: borda direita igual à do formulário em quatro larguras |
+| FE-V03 | Primeira tentativa Playwright recebeu HTTP 404 | Invocação do script npm repassou `127.0.0.1` duplicado como diretório raiz do Vite; servidor reiniciado com script `dev` que já fixa loopback | Resolvido: HTTP 200 e capturas em quatro viewports; FE-P03 superado por automação visual |
+| FE-V04 | Primeiro recorte da prancha visual continha 5 px da área amarela adjacente | Recorte da paisagem limitado a 880×280 antes da conversão para WebP; conferência visual do ativo e dos screenshots | Resolvido: somente cidade, ponte e árvores no asset do login |
+
+## 12/11/2026 - Fidelidade visual do login
+
+| ID | Problema | Diagnóstico e tratamento | Estado |
+|---|---|---|---|
+| FE-V05 | Paisagem aparecia como faixa retangular separada e painel ocupava largura total no desktop | Gradientes de transição no contêiner da paisagem; painel limitado a 560 px e centralizado, mantendo o asset e tokens existentes | Resolvido nas seis capturas Chrome; validação física ainda pendente |
+| FE-V06 | Campos e provedores não tinham ícones da referência | Ícones SVG decorativos para e-mail, cadeado, olho, Google e GitHub; labels preservados e erros associados por ARIA | Resolvido: inspeção visual, axe-core sem violações reportadas e Vitest 5/5 |
+| FE-V07 | Em 320 px com texto ampliado a 200%, nome do provedor GitHub era cortado | Grupo social passou a permitir quebra em duas linhas quando a largura do conteúdo exigir | Resolvido: captura `zoom-200.png` sem corte e sem overflow horizontal |

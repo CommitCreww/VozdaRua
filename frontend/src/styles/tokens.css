@@ -1,0 +1,24 @@
+:root {
+  font-family: Sora, system-ui, sans-serif;
+  color: #f8fafc;
+  background: #061626;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  /* Valores provisórios da direção visual aprovada; validar antes de congelar. */
+  --color-bg: #061626;
+  --color-surface: #092039;
+  --color-surface-input: #102c47;
+  --color-border: #4a7293;
+  --color-text: #f8fafc;
+  --color-text-muted: #c0cddc;
+  --color-accent: #ffc400;
+  --color-on-accent: #081827;
+  --color-focus: #ffe17a;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 280px; }
+button, input { font: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
