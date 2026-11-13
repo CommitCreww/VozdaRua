@@ -55,3 +55,6 @@ postgres-data/
 # Project-local runtimes and private validation artifacts
 /.tools/
 /.local/
+
+# Offline geographic reference tooling (stdlib Python).
+/scripts/__pycache__/

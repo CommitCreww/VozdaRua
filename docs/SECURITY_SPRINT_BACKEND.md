@@ -79,3 +79,21 @@ A tarefa específica de remediação produziu candidata source-review com PG17.1
 | 125 | FAIL para revisão independente, evidências disponíveis para análise humana |
 
 Os controles operacionais de autenticação continuam pendentes, incluindo rate limiting persistente, cooldown, entrega durável de e-mail e auditoria. A allowlist SQL permanece vazia. Nenhum resultado desta tarefa aprova exposição de rotas ou conclusão formal de fase.
+
+## 13/11/2026 — TESTE EXPERIMENTAL — NÃO APROVADO PARA PRODUÇÃO.
+
+Autorização atual aplicada ao ensaio local conforme avaliação prévia em [EXPERIMENTO_SQL_LOCAL.md](EXPERIMENTO_SQL_LOCAL.md). DT 24.4/SEC-085 vinculam os gates a merge/produção; a execução não concede exceção operacional nem altera decisões técnicas. A imagem 3.6 candidata por digest bc918a93... continua com gate FAIL.
+
+| SEC | Evidência desta execução |
+|---|---|
+| 055–058, 122 | PASS experimental nos oito casos SQL reais. Migrations 001–020, constraints/unicidade, rollback, consumo concorrente, revogação, expiração e corrida criação de sessão/reset comprovados na candidata local |
+| 108–109 | PASS experimental: bootstrap para schema/roles, queries da aplicação por role específica sem DDL, teste de CREATE TABLE negado |
+| 111–113 | PASS experimental: preflight antes do start, usuário postgres, cap_drop ALL, no-new-privileges, 512 MiB/1 CPU, rede internal única, volume novo próprio, zero portas publicadas, sem montagem de socket/volume anterior; zero conexões SQL não loopback na medição final |
+| 061–062, 070 | Evidências sanitizadas sem credenciais, segredos temporários em memória/metadados privados Docker, Gitleaks nos candidatos; volumes e logs fora do Git |
+| 085, 087, 089 | FAIL para aprovação operacional/merge: findings de imagem e revisão humana continuam pendentes, sem supressão ou promoção |
+| 120–121 | PASS local: suíte completa 82 testes incluindo oito reais, typecheck fontes/testes e build. HTTP usa repositories reais, e-mail e rate gate simulados |
+| 099 | Evidência parcial: sessão sobreviveu ao restart do container. Backup/restore e cenários de recuperação operacional não medidos |
+| 124 | Falhas reproduzidas no ensaio: transporte de porta em internal, relógios divergentes e cleanup sem timeout. Executor/fixtures corrigidos e repetidos; código de domínio preservado |
+| 125 | Revisão humana dos casos e do transporte experimental permanece pendente |
+
+Relógios Docker/Windows divergiram em cerca de 57 s. O relógio injetado da fixture foi calibrado ao PostgreSQL, com margem de 1 s. Essa medição exige tratamento antes da operação real e não representa correção de produção. O transporte pg por docker exec/stdio cobre SQL real, sem testar o futuro caminho TCP operacional. Gates de rate limiting/cooldown persistentes, entrega durável e auditoria continuam FAIL. A allowlist operacional permanece vazia e a chave experimental aceita exclusivamente o digest documentado. P01/P02 não foram declaradas concluídas.

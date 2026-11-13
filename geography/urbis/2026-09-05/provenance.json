@@ -1,0 +1,27 @@
+{
+    "decision":  "D-GEO-01",
+    "status":  "REJECTED_TOPOLOGY_NOT_ACTIVATED",
+    "institution":  "Prefeitura de São Paulo — CODATA / URBIS",
+    "dataset":  "https://dadosabertos.urbis.prefeitura.sp.gov.br/dataset/limites-municipais",
+    "resource":  "https://dadosabertos.urbis.prefeitura.sp.gov.br/dataset/113a28d3-ffce-40e1-8e6b-830f0c0f5df0/resource/5e2d0548-6b80-4558-a77a-9c24aa7ccc55/download/limites_municipais.geojson",
+    "obtainedDate":  "2026-11-13",
+    "timezone":  "America/Sao_Paulo",
+    "version":  "1@2026-09-05T01:11:04.673700",
+    "license":  "CC BY-SA 4.0",
+    "licenseUrl":  "https://creativecommons.org/licenses/by-sa/4.0/",
+    "sourceSrid":  31983,
+    "targetSrid":  4326,
+    "originalBytes":  785782,
+    "originalSha256":  "0853b37d21bd5008787b26ad142d5ca5a054d3b9285e5ce22a5855cd6fdd0c93",
+    "geometrySha256":  "3afb569ba262a9809296ce5d0e5c2e0228cc02688b0eb8bfb50b2b5c7e0d76a6",
+    "metadataSha256":  "273b8121fdef5cf06224e323f3ef6df45f8b53e8432ec3f2d02581f2de4df078",
+    "operations":  [
+                       "Extract geometry without coordinate changes",
+                       "Explicit PostGIS ST_SetSRID 31983 / ST_Transform 4326 for diagnosis only"
+                   ],
+    "repairs":  [
+
+                ],
+    "publishedOrActivated":  false,
+    "publisherChecksumAvailable":  false
+}

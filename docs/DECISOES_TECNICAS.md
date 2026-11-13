@@ -435,6 +435,24 @@ Evitar SMS como fator principal quando existir opção resistente a phishing.
 
 A implementação de recuperação de MFA deve receber revisão humana reforçada e não pode introduzir bypass mais fraco que o próprio MFA.
 
+### 5.8 Quotas e cooldowns aprovados em 13/11/2026
+
+Aprovação humana expressa na execução das configurações, posterior a D05. Valores operacionais iniciais, aplicados pelo mecanismo PostgreSQL compartilhado:
+
+| Operação | Origem | Identidade | Cooldown |
+|---|---|---|---|
+| Login | 60/5 min | 10/15 min | 1, 2, 4, 8, 16, 30 s progressivos |
+| Cadastro | 10/1 h | 3/1 h | 15 min |
+| Reenvio | 10/15 min | 3/15 min | 5 min |
+| Recuperação | 20/15 min | 3/15 min | 5 min |
+| Reset | 30/15 min | 10/15 min | 5 min |
+
+Login progride em falhas de credencial, com janela de falhas de 15 min. Nos demais fluxos, o cooldown aplica-se após exceder quota. Cooldown usa combinação origem/identidade, não flag global de bloqueio da conta. Tentativas durante bloqueio ativo não renovam prazo nem contador; quotas usam janelas fixas, não estendidas por negações. Identidade de reset permanece hash do token; demais identidades seguem contrato existente. Nenhum número de sessão foi inferido para endpoints pré-login.
+
+Todos os bloqueios são temporários, com recuperação por expiração. Quotas globais de identidade aprovadas ainda podem ser consumidas por terceiros dentro da janela fixa; mitigar sem ampliar cooldown para toda a conta e validar abuso dirigido em staging. Não prometer imunidade completa a DoS nem adicionar desafio/provedor/requisito funcional por inferência. HMAC compartilhado/rotação e proxy confiável permanecem configuração de segurança obrigatória.
+
+O código central é `backend/src/config/auth-rate.ts`; não registrar esses valores novamente como propostas pendentes. Esta aprovação não remove gates de infraestrutura, transporte real, revisão humana ou staging e não autoriza montar rotas operacionais automaticamente.
+
 ## 6. PWA
 
 ### 6.1 Prioridade
@@ -528,6 +546,14 @@ Continuam no PostgreSQL/PostGIS:
 Utilizar o **polígono oficial do município de São Paulo** armazenado no PostGIS.
 
 A origem deve ser oficial e a importação/versionamento deve ser registrada.
+
+#### D-GEO-01 — Fonte territorial primária e conferência (13/11/2026)
+
+**APROVADO expressamente pelo responsável nesta execução:** Prefeitura de São Paulo — Dados Abertos URBIS — **Limites Municipais**, mantido por CODATA. Conjunto: https://dadosabertos.urbis.prefeitura.sp.gov.br/dataset/limites-municipais . A Malha Municipal **IBGE 2025** é fonte de conferência independente, sem substituição automática da municipal.
+
+O portal indica **CC BY-SA 4.0**. A adoção de cada arquivo está condicionada a verificar procedência/integridade, formato, CRS, metadados, exclusividade territorial, validade topológica e obrigações da licença. Conservar original e SHA-256, recurso/edição/data, metadados e trilha de extração/transformação. Manter atribuição, fonte, licença, indicação de alterações e demais avisos fornecidos; observar CompartilhaIgual e ausência de restrições incompatíveis ao compartilhar a geometria/base derivada. A atribuição pública e a revisão das obrigações de publicação permanecem gates; frontend não é alterado por esta decisão.
+
+Importar em versão nova sem sobrescrever silenciosamente. Autoridade espacial permanece PostgreSQL 17/PostGIS 3.6, com armazenamento MULTIPOLYGON/4326 e transformação explícita do CRS declarado. Sem atribuição heurística de SRID, reparo automático ou promoção por resultado de mock. Nesta execução, somente banco experimental isolado autorizado; aprovação da fonte não aprova o artefato defeituoso, imagem, infraestrutura ou ambiente operacional. Fonte municipal inválida deve permanecer bloqueada, mesmo se IBGE for válido. Registro de procedência, defeitos e ensaios: `PROCEDENCIA_GEOGRAFICA_D_GEO_01.md`.
 
 ### 8.2 Validação
 
@@ -735,7 +761,31 @@ Ela deverá ser definida no momento da implementação, considerando:
 - não logar link completo de reset/confirmação se contiver token reutilizável;
 - respostas de recuperação não devem permitir enumeração de usuário.
 
+### 12.5 D05 — integração inicial aprovada em 13/11/2026
+
+Aprovação humana expressa na execução de integração operacional da autenticação:
+
+- Transporte de produção: **API HTTPS oficial do Postmark**. A pendência SMTP/API da seção 12.3 fica preservada como histórico anterior a esta aprovação; não é mais uma escolha aberta. Mailpit SMTP de desenvolvimento permanece inalterado.
+- **Três tentativas totais**; segunda tentativa **1 minuto após a falha da primeira**, terceira **5 minutos após a falha da segunda**. Não adicionar retries internos ao transporte, não prorrogar a validade original do token e não prometer exatamente uma entrega de rede.
+- Histórico da fila/intenção e tentativas: **30 dias após conclusão terminal**, condicionado à minimização e privacidade. Não reter senha, token bruto, cookie, credencial ou corpo sensível. Expurgo em manutenção segregada, sem ampliar privilégios de exclusão da aplicação.
+- Worker separado: polling base de **5 segundos**, backoff com teto de **60 segundos**. Multiplicador e demais parâmetros não aprovados continuam explícitos, sem defaults inferidos. Preservar recuperação por lease e coordenação SQL entre processos.
+- Alertar sobre **falhas definitivas** e **crescimento anormal da fila**. Limiares de crescimento, janela de sustentação, canal, coleta e operação dos alertas ainda exigem definição/validação; não considerar logs locais como integração de alertas comprovada.
+
+Esta aprovação autoriza implementação inicial e testes com transporte simulado; não autoriza envio real, deploy, uso operacional de imagem bloqueada ou montagem de rotas enquanto quotas de rate limiting e demais controles obrigatórios estiverem pendentes. Não altera D03/D04, retenções 7/30/90 dias de logs/segurança/auditoria, requisitos funcionais ou gates anteriores. As referências antigas no FSD à escolha SMTP/API permanecem histórico documental anterior a D05, sem nova regra funcional.
+
 ---
+
+### 12.6 Timeouts operacionais aprovados em 13/11/2026
+
+- Conexão PostgreSQL: **5 segundos**.
+- Consulta PostgreSQL: **10 segundos**, tanto no driver quanto por statement_timeout de conexão; não alterar configuração global do servidor.
+- Lease do worker: **60 segundos**.
+- Requisição Postmark: **10 segundos**.
+- Graceful shutdown: **30 segundos** a partir do primeiro sinal; sinais repetidos não estendem o prazo.
+
+Configuração central em `backend/src/config/operational-timeouts.ts`. Preservar D05 (três tentativas, 1/5 min, retenção 30 dias, polling 5 s e teto de backoff 60 s). Defaults operacionais usam os valores acima; overrides explícitos de fixtures não são configuração de produção. O multiplicador do backoff permanece explícito e não foi aprovado numericamente nesta atualização.
+
+HTTP tenta encerrar app/pool e finaliza o processo com falha ao exceder 30 s. Worker interrompe novas aquisições no primeiro sinal, drena até o prazo e, ao excedê-lo, cancela transporte, rejeita o lifecycle com erro fixo e impede envio/ACK quando uma operação SQL atrasada retorna. Claim não concluído é recuperável após lease, sem promoção de imagem. O bootstrap/supervisor de worker deve finalizar processo fatal que retenha handles de um adaptador que ignore cancelamento; não existe autorização para instalar supervisor/deploy nesta execução.
 
 ## 13. Push notifications
 
@@ -2080,6 +2130,8 @@ Não considerar decididos apenas por ausência de detalhe:
 - política funcional de “deixar de seguir”, ainda pertencente ao PRD.
 
 Esses itens só devem ser registrados como decisão após aprovação explícita.
+
+**Atualização de 13/11/2026:** o item SMTP/API acima é histórico: D05, na seção 12.5, aprova Postmark por API HTTPS e seus parâmetros iniciais. As demais pendências e aprovações anteriores permanecem como registradas, inclusive D03/D04 na seção 5.6. Quotas de rate limiting não foram aprovadas por D05.
 
 ---
 

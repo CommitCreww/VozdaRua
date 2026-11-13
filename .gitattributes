@@ -9,6 +9,7 @@
 *.tsx text eol=lf
 *.js text eol=lf
 *.mjs text eol=lf
+*.py text eol=lf
 *.json text eol=lf
 *.md text eol=lf
 # PLANO uses two trailing spaces for intentional Markdown line breaks.
@@ -26,3 +27,6 @@ docs/PLANO.md whitespace=-blank-at-eol
 *.pdf binary
 *.woff binary
 *.woff2 binary
+
+# Geographic originals are evidence: preserve exact bytes, including metadata line endings.
+/geography/**/*.original.* -text

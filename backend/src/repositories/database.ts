@@ -1,5 +1,6 @@
-import { Pool } from 'pg';
+import { Pool, type PoolConfig } from 'pg';
 import type { DatabaseConfig } from '../config/database.js';
+import { OPERATIONAL_TIMEOUTS } from '../config/operational-timeouts.js';
 
 export interface SqlExecutor {
   query<Row>(sql: string, values?: readonly unknown[]): Promise<readonly Row[]>;
@@ -25,17 +26,23 @@ export interface PoolLike {
   connect?(): Promise<PoolClientLike>;
 }
 
-export function createDatabase(config: DatabaseConfig, suppliedPool?: PoolLike): DatabasePort & TransactionalSqlExecutor {
-  const pool: PoolLike = suppliedPool ?? new Pool({
+export function databasePoolConfig(config: DatabaseConfig): PoolConfig {
+  return {
     host: config.host,
     port: config.port,
     database: config.database,
     user: config.user,
     password: config.password,
     max: 5,
-    connectionTimeoutMillis: 2_000,
+    connectionTimeoutMillis: OPERATIONAL_TIMEOUTS.postgresConnectMs,
+    statement_timeout: OPERATIONAL_TIMEOUTS.postgresQueryMs,
+    query_timeout: OPERATIONAL_TIMEOUTS.postgresQueryMs,
     idleTimeoutMillis: 10_000
-  });
+  };
+}
+
+export function createDatabase(config: DatabaseConfig, suppliedPool?: PoolLike): DatabasePort & TransactionalSqlExecutor {
+  const pool: PoolLike = suppliedPool ?? new Pool(databasePoolConfig(config));
   let closing: Promise<void> | undefined;
   return {
     async query<Row>(sql: string, values?: readonly unknown[]) {

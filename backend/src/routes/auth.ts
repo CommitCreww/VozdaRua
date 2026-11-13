@@ -35,7 +35,7 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthDependencies,
     const body = objectWithKeys(request.body, ['email', 'password']);
     const email = normalizedEmail(body?.email);
     if (!email || typeof body?.password !== 'string') return error(reply, 422, request.id);
-    const result = await auth.login(email, body.password, request.ip);
+    const result = await auth.login(email, body.password, request.ip, request.id);
     if (result.status === 'limited') return error(reply, 429, request.id);
     if (result.status === 'unverified') return reply.code(403).send({ code: 'EMAIL_UNVERIFIED', message: 'Confirme seu e-mail antes de entrar.', requestId: request.id });
     if (result.status !== 'ok') return error(reply, 401, request.id);

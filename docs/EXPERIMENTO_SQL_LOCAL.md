@@ -1,0 +1,23 @@
+# TESTE EXPERIMENTAL — NÃO APROVADO PARA PRODUÇÃO.
+
+Autorização específica do responsável em 13/11/2026 para validar SQL localmente, condicionada ao isolamento e à política. DT 22.5 mantém os findings bloqueantes. DT 24.4 explicita gates de merge/produção e SEC-085 trata bloqueio de merge. Não foi localizada proibição expressa de ensaio local restrito nessas regras. Esta execução interpreta a autorização atual como permissão apenas para o ensaio definido aqui, preservando FAIL de imagem e todos os gates operacionais. Não é exceção de merge, staging, produção ou conclusão de P01/P02.
+
+Imagem selecionada já existente `voz-da-rua-p01-postgis:libxml2-source-review`, digest `sha256:bc918a934e61985d08a51406d1d7e753a7d15e3206dd0f0923d75923e76c2893`. A candidata local 3.6 teve 5 Critical/167 High, 62 CVEs distintas, contra 6/191 e 87 na 3.7. O retroporte de xmlSnprintfElements está presente, com validação upstream incompleta. A escolha preserva PG17/PostGIS3.6 e reduz findings de Go em relação à imagem oficial avaliada, sem demonstrar segurança absoluta.
+
+Riscos residuais incluem UAF libxml2 CVE-2026-6653, FlatGeobuf PostGIS CVE-2026-73515, findings de MariaDB cliente, krb5, GDAL, Expat e demais dependências. Entradas XML/GML/FlatGeobuf não serão usadas no ensaio de autenticação, o que reduz exposição sem provar ausência de alcance. Comprometimento do processo PostgreSQL e do runtime continua possível. Findings e relatórios originais permanecem preservados.
+
+Condições anteriores ao start verificadas no objeto Docker criado. Rede nova dedicada e internal, volume novo exclusivo identificado por label, zero portas publicadas, cap_drop ALL, usuário postgres, no-new-privileges, memória 512 MiB e CPU 1, sem Docker socket ou montagens preexistentes. Credenciais CSPRNG exclusivas, somente dados sintéticos. Bootstrap administrativo restrito a migrations/roles, tráfego da aplicação por role sem DDL. Recursos têm nomes únicos identificados no relatório local. Falha de pré-condição impede start. Falha de isolamento após start provoca parada.
+
+O Docker Desktop recusou o mapeamento de porta da primeira tentativa na rede internal. Esse container foi parado antes de migrations. O transporte final usa o driver pg no host sobre um Duplex ligado por docker exec a um encaminhador Perl de código fixo. O encaminhador roda como postgres e conecta exclusivamente a 127.0.0.1:5432 dentro do container. Não há sidecar, porta exposta, imagem nova, shell ou destino de rede controlado por input. Isso valida o protocolo SQL, repositories e transações reais, mas não a futura conexão TCP operacional host/banco. Credenciais trafegam no protocolo PostgreSQL e não aparecem nos argumentos do processo.
+
+Foi medida diferença de aproximadamente 57 segundos entre relógios do Windows e Docker. As fixtures usam offset calibrado por clock_timestamp do banco, com margem de 1 segundo para latência/precisão. Essa adaptação é restrita aos testes e não corrige a sincronização operacional. A comparação temporal de produção continua pendente de relógios sincronizados e revisão.
+
+Os oito casos reais mantêm entrega/rate gate simulados no cenário HTTP, usando SQL real. A allowlist de imagens operacionais permanece independente. Evidências efetivas, falhas e limitações serão registradas em STATUS/ERROS e no relatório local do ensaio.
+
+## Atualização P10/P11 — 13/11/2026
+
+A suíte evoluiu para 65 testes SQL reais; a descrição acima dos oito casos é histórica. Continua sem aprovação operacional. Nenhuma condição de isolamento foi dispensada.
+
+O acúmulo de redes preservadas esgotou os pools automáticos do Docker. Não foram removidas redes/volumes antigos nem alterado daemon, rota global ou configuração do host. O helper agora consulta somente IPAM Docker e rotas IPv4 locais, escolhe uma faixa RFC1918 /28 livre em 10.253.0.0/16 e cria nova rede --internal com --subnet explícita. Default route não representa ocupação de uma faixa local; demais sobreposições impedem seleção. Sem faixa/verificação disponível, abortar antes do container. Este preflight é específico do host Windows autorizado; não é evidência de CI/Linux. A configuração e a seleção pura de intervalos receberam testes.
+
+Cada recurso continua recebendo nome/label exclusivos; preStart verifica rede interna e subnet selecionada, volume novo único, usuário/caps/no-new-privileges, memória/CPU e ausência de portas/socket. Dados e credenciais permanecem sintéticos/temporários. Relatório registra só a faixa escolhida, não o inventário de rotas. Rede e volume próprios são preservados após parada, sem cleanup destrutivo. Último ensaio: 10.253.0.16/28, container parado, zero conexões SQL não loopback.

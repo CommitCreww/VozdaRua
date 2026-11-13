@@ -1,7 +1,8 @@
 import type { PasswordRecoveryRepository } from '../services/password-recovery.js';
 import type { TransactionalSqlExecutor } from './database.js';
+import type { AuthTokenEffect } from './auth-mail.js';
 
-export function createPasswordRecoveryRepository(database: TransactionalSqlExecutor): PasswordRecoveryRepository {
+export function createPasswordRecoveryRepository(database: TransactionalSqlExecutor, mail?: AuthTokenEffect): PasswordRecoveryRepository {
   return {
     async requestReset(accountId, tokenHash, expiresAt, now) {
       return database.transaction(async (sql) => {
@@ -9,6 +10,7 @@ export function createPasswordRecoveryRepository(database: TransactionalSqlExecu
         if (!account) return false;
         await sql.query(`INSERT INTO tokens_conta (usuario_id,tipo,token_hash,expira_em,criado_em)
           VALUES ($1,'PASSWORD_RESET',$2,$3,$4)`, [accountId, tokenHash, expiresAt, now]);
+        await mail?.issued(sql, accountId, 'PASSWORD_RESET', tokenHash, expiresAt);
         return true;
       });
     },

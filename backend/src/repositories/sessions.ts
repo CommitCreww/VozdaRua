@@ -1,5 +1,6 @@
 import { SESSION_ABSOLUTE_MS, SESSION_IDLE_MS, isSessionValid, type SessionStore, type StoredSession } from '../security/sessions.js';
 import type { SqlExecutor, TransactionalSqlExecutor } from './database.js';
+import { createAuthSecurityRepository } from './auth-security.js';
 
 interface SessionRow {
   id_hash: string;
@@ -18,13 +19,13 @@ async function insert(sql: SqlExecutor, session: StoredSession) {
     [session.idHash, session.accountId, session.csrfTokenHash, session.createdAt, session.lastActivityAt, session.revokedAt]);
 }
 
-export function createSessionStore(database: TransactionalSqlExecutor): SessionStore {
+export function createSessionStore(database: TransactionalSqlExecutor, options: { securityEvents: boolean } = { securityEvents: false }): SessionStore {
   return {
     async findByIdHash(idHash) {
       const [row] = await database.query<SessionRow>(`SELECT ${columns} FROM sessoes WHERE id_hash=$1`, [idHash]);
       return row ? dto(row) : null;
     },
-    async save(session, expectedPasswordHash) {
+    async save(session, expectedPasswordHash, requestId) {
       if (!isSessionValid(session, session.lastActivityAt)) return false;
       return database.transaction(async (sql) => {
         // Same first lock as reset: a login verified before reset cannot survive it.
@@ -32,6 +33,8 @@ export function createSessionStore(database: TransactionalSqlExecutor): SessionS
           'SELECT senha_hash, email_verificado_em FROM usuarios WHERE id=$1 FOR UPDATE', [session.accountId]);
         if (!account?.email_verificado_em || account.senha_hash !== expectedPasswordHash) return false;
         await insert(sql, session);
+        await sql.query('UPDATE usuarios SET ultimo_acesso_em=$2 WHERE id=$1', [session.accountId, session.createdAt]);
+        if (options.securityEvents) await createAuthSecurityRepository(sql).record('LOGIN_SUCCEEDED', session.accountId, requestId);
         return true;
       });
     },

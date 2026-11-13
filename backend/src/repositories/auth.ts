@@ -1,5 +1,6 @@
 import type { AuthRepository, LocalAccount } from '../services/auth.js';
 import type { TransactionalSqlExecutor } from './database.js';
+import type { AuthTokenEffect } from './auth-mail.js';
 
 interface AccountRow {
   id: string;
@@ -13,7 +14,7 @@ const columns = 'id, email, senha_hash, email_verificado_em, papel, status';
 const dto = (row: AccountRow): LocalAccount => ({ id: row.id, email: row.email, passwordHash: row.senha_hash,
   emailVerifiedAt: row.email_verificado_em, role: row.papel, status: row.status });
 
-export function createAuthRepository(database: TransactionalSqlExecutor): AuthRepository {
+export function createAuthRepository(database: TransactionalSqlExecutor, mail?: AuthTokenEffect): AuthRepository {
   return {
     async findByEmail(email) {
       const [row] = await database.query<AccountRow>(`SELECT ${columns} FROM usuarios WHERE LOWER(email)=LOWER($1)`, [email]);
@@ -33,6 +34,7 @@ export function createAuthRepository(database: TransactionalSqlExecutor): AuthRe
           VALUES ($1,$2,CURRENT_TIMESTAMP,$3,CURRENT_TIMESTAMP)`, [account.id, input.termsVersion, input.privacyVersion]);
         await sql.query(`INSERT INTO tokens_conta (usuario_id,tipo,token_hash,expira_em)
           VALUES ($1,'EMAIL_VERIFICATION',$2,$3)`, [account.id, input.tokenHash, input.expiresAt]);
+        await mail?.issued(sql, account.id, 'EMAIL_VERIFICATION', input.tokenHash, input.expiresAt);
         return true;
       });
     },
@@ -43,6 +45,7 @@ export function createAuthRepository(database: TransactionalSqlExecutor): AuthRe
         if (!account) return false;
         await sql.query(`INSERT INTO tokens_conta (usuario_id,tipo,token_hash,expira_em)
           VALUES ($1,'EMAIL_VERIFICATION',$2,$3)`, [account.id, tokenHash, expiresAt]);
+        await mail?.issued(sql, account.id, 'EMAIL_VERIFICATION', tokenHash, expiresAt);
         return true;
       });
     },
