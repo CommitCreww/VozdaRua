@@ -249,3 +249,10 @@ D-GEO-01 registrada em DECISOES_TECNICAS §8.1; licença municipal indicada no c
 **Verificação final:** 184 locais/simulados + 73 SQL reais = **257 PASS**, mais **3 SKIP expressos** dos fluxos positivos que exigem geometria municipal válida. Quatro testes Python PASS. Typecheck fontes/testes, build, Gitleaks backend/scripts/geography e git diff --check PASS; documentos escaneados no fechamento. Audit sete pacotes Moderate dev (exit 1), zero High/Critical; produção sem findings (exit 0). Trivy/CI/staging não executados nesta entrega. Logs e relatórios .local/dgeo01-* e .local/vdr-sql-1a78ada3-d009-4177-80b4-9e8a08727d82.json preservados. Imagem/infraestrutura operacional não aprovadas.
 
 **TESTE EXPERIMENTAL — NÃO APROVADO PARA PRODUÇÃO.** Rede/volume novos internos e exclusivos, nenhuma porta ou conexão SQL não loopback, nenhum acesso a banco anterior; container final encerrado exit 0/OOM false. Próxima atividade P11: recurso corrigido/revisado, importação idempotente e cenários geográficos positivos oficiais. Sem deploy, push, frontend, promoção de imagem/rotas ou conclusão de P10/P11/P12.
+
+## 13/11/2026 — Documentação principal e caminhos visuais
+
+| ID | Problema / impacto | Tratamento e estado |
+|---|---|---|
+| DOC-README-01 | `AGENTS.md` recebido cita `docs/frontend/Desing.md`, enquanto `PREPARACAO.md` aponta `docs/frontend/Design.md`; após a reorganização integrada, os arquivos vigentes estão em `docs/Design/Design.md` e `docs/Design/Home.md` | README usa os caminhos físicos vigentes e a divergência fica registrada. Documentos normativos não foram alterados nesta entrega. **Pendente** de correção documental autorizada |
+| DOC-README-02 | README anterior descrevia arquitetura como indefinida e status de 12/11/2026, embora stack, implementação e registros posteriores já existissem | README alinhado ao PRD, FSD, decisões técnicas, Design e STATUS até 13/11/2026, distinguindo implementação, experimento, referência visual e planejamento. **Resolvido no README** |

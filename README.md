@@ -1,898 +1,278 @@
-> **Situação vigente — 12/11/2026:** P01 parcialmente concluída, com bloqueios de segurança das imagens e decisão de armazenamento S3; P02 parcialmente concluída nas categorias A e B, com integração real pendente. Consulte o [STATUS](docs/STATUS.md) e o [guia P01](docs/AMBIENTE_P01.md). Os registros P00 e o conteúdo de produto abaixo são históricos e não substituem as [decisões técnicas aprovadas](docs/DECISOES_TECNICAS.md), o [FSD](docs/FSD/FSD.md) e as [instruções de desenvolvimento](AGENTS.md).
-
 <div align="center">
+
+<img src="docs/Design/assets/logo-voz-da-rua.png" alt="Logo do Voz da Rua" width="150">
 
 # Voz da Rua
 
-### Uma plataforma colaborativa para identificar, acompanhar e encaminhar problemas urbanos em São Paulo.
+### Cidadania, colaboração e tecnologia para transformar problemas urbanos em ação.
 
-[![Status](https://img.shields.io/badge/status-em%20defini%C3%A7%C3%A3o%20de%20produto-111111?style=for-the-badge&labelColor=111111)](#status-do-projeto)
-[![Cidade](https://img.shields.io/badge/cidade-S%C3%A3o%20Paulo-111111?style=for-the-badge&labelColor=111111)](#escopo-geogr%C3%A1fico)
-[![Idioma](https://img.shields.io/badge/idioma-pt--BR-111111?style=for-the-badge&labelColor=111111)](#idioma)
-[![Open Source](https://img.shields.io/badge/open%20source-em%20planejamento-111111?style=for-the-badge&labelColor=111111)](#licen%C3%A7a)
+[![Status](https://img.shields.io/badge/status-em%20desenvolvimento-0B1F3A?style=for-the-badge)](docs/STATUS.md)
+[![Node.js](https://img.shields.io/badge/Node.js-26%20LTS-5FA04E?style=for-the-badge&logo=nodedotjs&logoColor=white)](backend/package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](docs/DECISOES_TECNICAS.md)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL%2017-PostGIS%203.6-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](docs/database/README-DB.md)
+[![License](https://img.shields.io/badge/licen%C3%A7a-Apache%202.0-D9A521?style=for-the-badge)](LICENSE)
 
-**Veja o que está acontecendo perto de você.  
-Relate problemas. Confirme ocorrências. Encontre o canal certo para denunciar.**
+**Descubra o que acontece perto de você. Relate problemas. Confirme ocorrências. Encontre o canal oficial adequado.**
+
+[Objetivo](#objetivo) · [Funcionalidades](#funcionalidades-do-mvp) · [Telas](#experiência-e-referências-visuais) · [Arquitetura](#arquitetura) · [Executar localmente](#executando-localmente) · [Documentação](#documentação)
 
 </div>
 
 ---
 
-## Sobre o projeto
+## Objetivo
 
-O **Voz da Rua** é uma plataforma colaborativa pensada para centralizar a descoberta, o registro e o acompanhamento de problemas urbanos na cidade de São Paulo.
+O **Voz da Rua** é uma plataforma colaborativa, mobile-first, criada para organizar a identificação e o acompanhamento de problemas urbanos no município de São Paulo.
 
-A proposta nasce de um problema simples: situações como buracos, calçadas sem acessibilidade, problemas de iluminação, falhas em estruturas públicas, transporte, estações, vias e espaços privados de uso público possuem canais de denúncia diferentes e, muitas vezes, pouco intuitivos.
+Buracos, falhas de iluminação, barreiras de acessibilidade e outros problemas do cotidiano costumam estar distribuídos entre diferentes canais de atendimento. O projeto aproxima três elementos que hoje ficam desconectados: **o cidadão, a ocorrência e o responsável por recebê-la**.
 
-O Voz da Rua pretende funcionar como uma camada de organização entre o cidadão, o problema identificado e o responsável por recebê-lo.
+A plataforma permite localizar problemas próximos, registrar evidências, confirmar uma ocorrência existente, acompanhar sua evolução e acessar o canal oficial correspondente. O Voz da Rua **não substitui órgãos públicos ou seus sistemas de protocolo**; ele facilita o caminho até esses canais e preserva o histórico comunitário do problema.
 
-A plataforma permitirá que pessoas próximas de uma ocorrência confirmem sua existência, acompanhem sua evolução e encontrem rapidamente o canal oficial adequado para realizar a denúncia.
+## Como funciona
 
-> O Voz da Rua não pretende substituir os canais oficiais dos órgãos públicos ou privados.  
-> Seu papel é **organizar, contextualizar e facilitar o caminho entre o cidadão e o responsável pelo problema**.
+```text
+Problema identificado na cidade
+              │
+              ▼
+ Localização validada em São Paulo
+              │
+              ▼
+ Busca de ocorrências semelhantes
+        ┌─────┴─────┐
+        │           │
+    Já existe    Não existe
+        │           │
+        ▼           ▼
+ "Eu também vi"  Nova ocorrência + foto
+        │           │
+        └─────┬─────┘
+              ▼
+       Moderação humana
+              │
+              ▼
+ Publicação, acompanhamento e encaminhamento
+```
 
----
+O domínio usa proximidade geográfica como regra de negócio. Ações presenciais exigem localização válida, dentro do município atendido e a até **3 km** da ocorrência. A autoridade espacial é o PostgreSQL/PostGIS no backend — não o navegador ou o serviço de geocodificação.
 
-## Visão
+## Funcionalidades do MVP
 
-Construir uma plataforma onde qualquer cidadão possa entender rapidamente:
+### Para o cidadão
 
-- quais problemas existem perto dele;
-- onde esses problemas estão;
-- quantas pessoas também os identificaram;
-- qual o status atual da ocorrência;
-- qual órgão ou responsável deve receber a denúncia;
-- como realizar a denúncia pelo canal oficial;
-- como contribuir para confirmar ou acompanhar a situação.
+- cadastro local com confirmação de e-mail, login e recuperação de acesso;
+- Home com ocorrências em até 3 km, ordenadas por proximidade;
+- mapa e filtros por categoria, distância e status;
+- registro de ocorrência com localização, descrição e uma evidência fotográfica;
+- detecção de possíveis duplicidades antes da criação;
+- confirmação comunitária por meio do **“Eu também vi”**;
+- detalhes, histórico e acompanhamento das ocorrências;
+- área **Minhas ocorrências**, separando criações e participações;
+- indicação de resolução e sinalização de reabertura;
+- acesso orientado ao canal oficial responsável;
+- perfil privado por padrão e área Social com exposição opt-in;
+- notificações internas e preferências de comunicação.
 
----
+### Para moderação e administração
 
-## Princípios do produto
+- fila de análise com evidência, localização e possíveis duplicidades;
+- validação, rejeição, marcação de duplicidade e seleção de imagem pública;
+- decisões auditáveis de resolução, reabertura e arquivamento;
+- gestão de usuários, categorias, canais e parâmetros conforme o papel;
+- indicadores administrativos agregados, sem ampliar a coleta de dados pessoais.
 
-O projeto está sendo desenvolvido em torno de alguns princípios fundamentais:
+> Vídeo, chat em tempo real, aplicativo nativo, escrita offline, outras cidades e acompanhamento automático de protocolos oficiais estão fora do MVP atual.
 
-| Princípio | Objetivo |
+## Experiência e referências visuais
+
+A interface segue uma direção **dark-first**, mobile-first e acessível, com azul-marinho, amarelo urbano, tipografia Sora e componentes confortáveis para uso em movimento. As imagens abaixo são referências de produto: dados, nomes, números e molduras são ilustrativos.
+
+### Acesso e Home
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/Design/references/auth-fluxo-dark.png" alt="Referência visual das telas de login, cadastro e recuperação de acesso">
+      <br><strong>Autenticação</strong><br>
+      <sub>Login, criação de conta e recuperação.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/Design/references/home-mobile-dark.png" alt="Referência visual da Home mobile do Voz da Rua">
+      <br><strong>Home — Perto de você</strong><br>
+      <sub>Mapa resumido e ocorrências próximas.</sub>
+    </td>
+  </tr>
+</table>
+
+### Mapa, denúncia e acompanhamento
+
+<table>
+  <tr>
+    <td width="33%" align="center">
+      <img src="docs/Design/references/mapa-ocorrencias-mobile.png" alt="Referência visual do mapa de ocorrências">
+      <br><strong>Mapa</strong>
+    </td>
+    <td width="33%" align="center">
+      <img src="docs/Design/references/denuncia-quatro-etapas.png" alt="Referência visual do fluxo de nova ocorrência">
+      <br><strong>Nova ocorrência</strong>
+    </td>
+    <td width="33%" align="center">
+      <img src="docs/Design/references/minhas-ocorrencias-acompanhamento.png" alt="Referência visual da área Minhas ocorrências">
+      <br><strong>Acompanhamento</strong>
+    </td>
+  </tr>
+</table>
+
+As referências possuem graus diferentes de aprovação. A Home e a linguagem visual de autenticação estão aprovadas como direção; o mapa expandido e alguns fluxos permanecem em validação. Consulte o [Design System](docs/Design/Design.md), a [especificação da Home](docs/Design/Home.md) e o [catálogo das imagens](docs/Design/references/README.md) antes de implementar uma tela.
+
+## Diferenciais técnicos
+
+- **Geografia confiável:** PostgreSQL 17 + PostGIS 3.6 decidem município, distâncias e regras espaciais.
+- **Privacidade desde o domínio:** perfil privado por padrão, identidade oculta nos relatos e ausência de histórico contínuo de localização.
+- **Autorização contextual:** sessão, papel, status da conta, ownership e estado do recurso são revalidados no servidor.
+- **Moderação humana:** volume comunitário gera prioridade, mas não substitui decisões humanas nos fluxos de validação e reabertura.
+- **Evidências protegidas:** originais privados; publicação somente de derivadas reprocessadas e aprovadas pela moderação.
+- **Integridade transacional:** SQL parametrizado, migrations versionadas e concorrência tratada no banco real.
+- **Offline seguro:** a PWA oferece leitura limitada; mutações não são enfileiradas sem revalidação de contexto.
+- **Qualidade verificável:** testes HTTP, integração PostgreSQL/PostGIS, acessibilidade e jornadas E2E fazem parte dos gates planejados.
+
+## Arquitetura
+
+```text
+React + Vite (PWA)
+        │ REST/JSON — /api/v1
+        ▼
+Fastify + TypeScript
+        │
+        ├── Routes       → rotas e hooks
+        ├── Controllers  → HTTP e DTOs
+        ├── Services     → domínio, autorização e transações
+        └── Repositories → SQL parametrizado
+                │
+                ├── PostgreSQL 17 + PostGIS 3.6 + pgcrypto
+                ├── armazenamento S3 compatível para imagens
+                └── Postmark / Mailpit para e-mail
+```
+
+### Stack aprovada
+
+| Camada | Tecnologias |
 |---|---|
-| **Localidade** | Priorizar problemas realmente próximos ao cidadão. |
-| **Colaboração** | Permitir que diferentes usuários confirmem a mesma ocorrência. |
-| **Confiabilidade** | Evitar múltiplos pins para o mesmo problema e utilizar moderação. |
-| **Transparência** | Manter histórico e status das ocorrências. |
-| **Privacidade** | Não expor automaticamente a identidade de quem relata problemas. |
-| **Acessibilidade** | Construir uma plataforma utilizável por diferentes perfis de usuários. |
-| **Encaminhamento** | Facilitar o acesso ao canal oficial responsável pela denúncia. |
+| Frontend | React, TypeScript, Vite, PWA, MapLibre GL JS e MapTiler |
+| Backend | Node.js 26 LTS, TypeScript, Fastify, `pg` e REST/JSON |
+| Dados | PostgreSQL 17, PostGIS 3.6, pgcrypto e migrations SQL |
+| Testes | Vitest, `fastify.inject()`, React Testing Library, Playwright e PostgreSQL/PostGIS real |
+| Operação | Docker Compose no desenvolvimento; Nginx e HTTPS previstos para produção |
 
----
+## Estado atual do projeto
 
-## Escopo geográfico
+O projeto está em **desenvolvimento ativo**. A documentação de produto, a arquitetura base, a autenticação, os controles de segurança, a jornada pública de acesso e partes das consultas de ocorrências já possuem implementação e testes. Integrações geográficas e operacionais ainda têm bloqueios documentados e **não estão aprovadas para produção**.
 
-Nesta primeira fase, o Voz da Rua será dedicado **exclusivamente ao município de São Paulo — SP**.
+| Área | Situação resumida |
+|---|---|
+| Frontend | Jornada de acesso implementada; demais telas ainda seguem as referências de design |
+| Backend | Fundação Fastify, autenticação, perfil e consultas preparatórias de ocorrências |
+| Banco | Migrations `001–027`; testes experimentais com PostgreSQL/PostGIS real |
+| Geografia | Pipeline e validações preparados; recurso territorial oficial atual bloqueado por topologia inválida |
+| Produção | Não liberada; infraestrutura, scanners, staging e revisão humana permanecem pendentes |
 
-As funcionalidades relacionadas a ocorrência utilizarão a localização do usuário como parte das regras de negócio.
+O registro completo, com resultados efetivamente observados e limitações, está em [`docs/STATUS.md`](docs/STATUS.md). Problemas conhecidos são mantidos em [`docs/ERROS.md`](docs/ERROS.md).
 
-### Regra de proximidade
-
-Ações presenciais relacionadas a uma ocorrência exigirão que o cidadão esteja em um raio máximo de:
-
-```text
-3 km
-```
-
-Essa regra será aplicada inicialmente para:
-
-- criar uma nova denúncia;
-- confirmar uma ocorrência com **“Eu também vi”**;
-- informar que um problema foi resolvido;
-- contribuir para uma possível reabertura.
-
----
-
-## Como o Voz da Rua funciona
+## Estrutura do repositório
 
 ```text
-Cidadão identifica um problema
-          │
-          ▼
-Seleciona o local no mapa
-          │
-          ▼
-Sistema procura ocorrências semelhantes
-          │
-      ┌───┴────┐
-      │        │
-   Existe    Não existe
-      │        │
-      ▼        ▼
-Eu também   Nova ocorrência
-   vi            │
-                 ▼
-          Foto obrigatória
-                 │
-                 ▼
-         Fila de moderação
-                 │
-                 ▼
-              Validada
-                 │
-                 ▼
-          Publicada no mapa
+backend/       API Fastify, domínio, persistência e testes
+frontend/      aplicação React/Vite e testes de interface
+db/            migrations SQL e seed exclusivo de desenvolvimento
+docs/          PRD, FSD, decisões, design, contratos e progresso
+geography/     fontes territoriais versionadas e sua procedência
+infra/         imagens e recursos de infraestrutura
+scripts/       setup, migrations, seed e verificações locais
 ```
 
----
+## Executando localmente
 
-# Funcionalidades planejadas
+### Pré-requisitos
 
-## Autenticação
+- Node.js **26 LTS** e npm;
+- Docker Desktop com Docker Compose, para as integrações locais;
+- PowerShell 7+ no fluxo de preparação para Windows.
 
-O acesso ao conteúdo da plataforma será restrito a usuários autenticados.
+O repositório fornece um runtime Node portátil para Windows:
 
-Está previsto suporte para:
-
-- conta própria Voz da Rua;
-- login com Google;
-- login com GitHub;
-- provedores OIDC/OAuth adicionais, quando necessário;
-- recuperação de senha;
-- gerenciamento de sessão.
-
-Usuários não autenticados não poderão acessar o mapa, as ocorrências ou a área Social.
-
----
-
-## Home — Perto de você
-
-Após o login, o usuário será direcionado para a Home.
-
-A Home não será um mapa geral.
-
-Ela será um feed de problemas encontrados em um raio de até **3 km da localização atual do cidadão**.
-
-### Cada card poderá exibir
-
-- mini mapa do local;
-- pin da ocorrência;
-- nome da rua;
-- bairro;
-- tipo de problema;
-- distância;
-- quantidade de relatos;
-- status;
-- órgão ou canal responsável;
-- link oficial para realizar a denúncia;
-- ação **“Eu também vi”**.
-
-Exemplo conceitual:
-
-```text
-┌──────────────────────────────────┐
-│                                  │
-│          MINI MAPA               │
-│                                  │
-│      Rua Serra de Botucatu       │
-│              ●                   │
-│                                  │
-├──────────────────────────────────┤
-│ Buraco na via                    │
-│                                  │
-│ Rua Serra de Botucatu, 500       │
-│ Tatuapé                          │
-│                                  │
-│ 320 m de distância               │
-│ 37 pessoas também viram          │
-│                                  │
-│ [ EU TAMBÉM VI ]                 │
-│                                  │
-│ Denuncie oficialmente em: SP156  │
-│ [ IR PARA O SITE ]               │
-└──────────────────────────────────┘
+```powershell
+./scripts/setup-node.ps1
 ```
 
----
+### Frontend
 
-## Fazer denúncia
-
-A criação de uma nova ocorrência acontecerá em uma área separada da Home.
-
-Essa funcionalidade abrirá o mapa completo.
-
-### Fluxo previsto
-
-1. obter localização atual;
-2. verificar se o usuário está dentro da área atendida;
-3. permitir seleção do ponto do problema;
-4. garantir distância máxima de 3 km;
-5. procurar possíveis ocorrências semelhantes;
-6. caso já exista, sugerir **“Eu também vi”**;
-7. caso não exista, permitir criação;
-8. selecionar categoria;
-9. adicionar título e descrição;
-10. enviar exatamente uma foto;
-11. enviar para moderação.
-
----
-
-## Ocorrências
-
-Uma ocorrência representa um problema real localizado.
-
-```text
-1 problema real
-=
-1 ocorrência principal
-=
-1 pin no mapa após validação
+```powershell
+cd frontend
+npm ci
+npm run dev
 ```
 
-Vários cidadãos podem participar da mesma ocorrência através de relatos.
+### Backend
 
-### Estados previstos
-
-- `PENDENTE_VALIDACAO`
-- `VALIDADA`
-- `ENCAMINHADA`
-- `EM_ANALISE`
-- `EM_RESOLUCAO`
-- `RESOLVIDA`
-- `REJEITADA`
-- `DUPLICADA`
-- `ARQUIVADA`
-
-A modelagem definitiva desses estados ainda poderá evoluir.
-
----
-
-## Relatos da comunidade
-
-Uma mesma ocorrência poderá receber relatos de diferentes cidadãos.
-
-Cada usuário poderá participar apenas uma vez da contagem da ocorrência.
-
-Além da confirmação **“Eu também vi”**, poderá ser enviado um pequeno texto opcional.
-
-Exemplo:
-
-> “Passei pelo local hoje pela manhã e o problema continua.”
-
-Os relatos não funcionarão como comentários sociais comuns.
-
-Eles representam participação formal naquela ocorrência.
-
----
-
-## Evidências
-
-Toda nova denúncia deverá possuir:
-
-```text
-1 foto obrigatória
+```powershell
+cd backend
+npm ci
+npm run typecheck
+npm test
+npm run build
 ```
 
-Vídeos não fazem parte do MVP atual.
+O backend valida as variáveis de ambiente no início. Não use credenciais reais em arquivos versionados e não copie configurações de produção para o ambiente local. Para banco, Mailpit, migrations, seed e limitações atuais das imagens, siga o [guia de ambiente P01](docs/AMBIENTE_P01.md).
 
-A foto enviada pelo cidadão funcionará como evidência e não será necessariamente publicada diretamente no pin.
+## Qualidade, segurança e privacidade
 
-Moderadores e administradores poderão definir qual imagem será utilizada publicamente.
+Segurança é requisito de produto e condição de entrega. Entre as diretrizes do projeto estão:
 
----
+- sessões server-side em cookie HttpOnly, Secure em produção e proteção CSRF;
+- negação por padrão, RBAC e prevenção de IDOR no backend;
+- validação de entrada, limites, rate limiting e erros sem detalhes internos;
+- SQL parametrizado e credenciais de banco com menor privilégio;
+- validação de magic bytes, decode, dimensões e remoção de EXIF em imagens;
+- segredos fora do Git e auditoria de ações sensíveis;
+- minimização de dados pessoais e tratamento de localização compatível com privacidade;
+- revisão do [Security Gate SEC-001–125](docs/FSD/SECURITY_GATE_100.md) em cada entrega aplicável.
 
-## Minhas ocorrências
+Mudanças executáveis devem incluir testes positivos, negativos e de autorização. Resultados experimentais não equivalem a aprovação de staging ou produção.
 
-Usuários poderão acompanhar sua participação através de uma área própria.
+## Documentação
 
-Ela deverá separar:
+| Documento | Conteúdo |
+|---|---|
+| [PRD](docs/PRD/prd.md) | visão, requisitos funcionais e escopo do produto |
+| [FSD](docs/FSD/FSD.md) | domínio, contratos, segurança e critérios de aceite |
+| [Decisões técnicas](docs/DECISOES_TECNICAS.md) | stack e decisões arquiteturais aprovadas |
+| [Design System](docs/Design/Design.md) | linguagem visual, fluxos e estados de aprovação |
+| [Plano](docs/PLANO.md) | fases, dependências e critérios de execução |
+| [Status](docs/STATUS.md) | progresso, verificações, limitações e pendências |
+| [Erros conhecidos](docs/ERROS.md) | problemas, impacto, tratamento e estado |
+| [Ambiente local](docs/AMBIENTE_P01.md) | preparação e validação da infraestrutura de desenvolvimento |
 
-- problemas iniciados pelo usuário;
-- problemas que ele confirmou.
+Em caso de divergência, não transforme uma proposta visual ou uma pendência em comportamento. Consulte as regras de precedência do FSD e das decisões técnicas e registre o conflito antes de alterar a parte afetada.
 
-### Edição
+## Contribuindo
 
-O criador poderá editar a ocorrência durante as primeiras:
+Contribuições devem respeitar o escopo da fase autorizada, os contratos documentados e as regras de segurança do repositório. Antes de desenvolver:
 
-```text
-12 horas
-```
+1. leia [`AGENTS.md`](AGENTS.md) e as fontes obrigatórias;
+2. confirme a fase e as dependências no [`PLANO`](docs/PLANO.md);
+3. consulte o FSD da área afetada e os contratos existentes;
+4. inclua testes aplicáveis e atualize o status da entrega;
+5. não faça commit, push, deploy ou altere decisões aprovadas sem autorização correspondente.
 
-desde que ela ainda não tenha sido validada.
+Features relevantes devem ser revisadas por Pull Request. Ainda não existe uma convenção obrigatória aprovada de branches ou mensagens de commit.
 
-### Exclusão
+## Licença
 
-O criador também poderá excluir durante as primeiras 12 horas.
-
-Se um moderador validar antes do fim desse período:
-
-```text
-edição bloqueada
-exclusão bloqueada
-```
-
----
-
-## Moderação
-
-O Voz da Rua utilizará moderação humana para validar e organizar ocorrências.
-
-Moderadores poderão:
-
-- visualizar ocorrências pendentes;
-- analisar evidências;
-- visualizar localização;
-- verificar duplicidades;
-- validar;
-- rejeitar;
-- marcar como duplicada;
-- editar informações;
-- selecionar foto pública;
-- resolver;
-- reabrir;
-- registrar justificativas.
-
-### Alerta de prioridade
-
-Uma ocorrência poderá ser validada desde o primeiro relato.
-
-Entretanto, ao alcançar:
-
-```text
-10 relatos de usuários diferentes
-```
-
-ela deverá gerar destaque no painel de moderação.
-
-Isso **não significa validação automática**.
-
----
-
-## Resolução comunitária
-
-Usuários próximos de uma ocorrência poderão informar:
-
-**“Este problema foi resolvido.”**
-
-Regras previstas:
-
-- usuário autenticado;
-- usuário não banido;
-- distância máxima de 3 km;
-- uma confirmação por usuário.
-
-Quando o total ultrapassar:
-
-```text
-10.000 usuários diferentes
-```
-
-a ocorrência poderá ser marcada automaticamente como resolvida.
-
-Moderadores e administradores poderão resolver uma ocorrência diretamente.
-
----
-
-## Reabertura
-
-Ocorrências resolvidas poderão voltar a ficar ativas.
-
-Moderadores e administradores poderão reabrir diretamente.
-
-A comunidade também poderá indicar que o problema reapareceu.
-
-Ao atingir:
-
-```text
-1.000 novos relatos válidos
-```
-
-o sistema deverá gerar um **alerta emergencial de reabertura**.
-
-A reabertura comunitária não será automática: a decisão ficará com a moderação.
-
----
-
-## Encaminhamento para canais oficiais
-
-O Voz da Rua armazenará a ocorrência dentro da plataforma, mas não substituirá o processo oficial de denúncia.
-
-Quando necessário, o cidadão será direcionado ao canal responsável.
-
-Exemplo:
-
-```text
-Problema identificado
-       ↓
-Categoria detectada
-       ↓
-Responsável identificado
-       ↓
-Instruções exibidas
-       ↓
-Site oficial aberto em nova aba
-       ↓
-Cidadão conclui a denúncia
-```
-
-O sistema poderá mostrar instruções específicas antes do redirecionamento.
-
----
-
-# Área Social
-
-O projeto também prevê uma área Social separada das ocorrências.
-
-Ela funcionará como um feed de publicações, e não como chat em tempo real.
-
-## Funcionalidades planejadas
-
-- posts;
-- comentários;
-- curtidas;
-- seguidores;
-- perfis públicos;
-- vinculação opcional de post a uma ocorrência.
-
-### Perfis públicos
-
-Somente usuários que optarem por possuir um perfil público poderão publicar.
-
-Usuários com perfil privado ainda poderão:
-
-- consumir o feed;
-- seguir perfis;
-- curtir;
-- comentar.
-
-Ao tornar o perfil privado novamente, posts antigos deixarão de aparecer publicamente.
-
----
-
-# Privacidade
-
-A identidade dos cidadãos não será exposta automaticamente nos relatos.
-
-Por padrão:
-
-```text
-perfil = privado
-identidade no relato = oculta
-```
-
-O usuário poderá futuramente optar por:
-
-- tornar o perfil público;
-- permitir que seu nome seja exibido em determinados contextos.
-
-A exposição de identidade será sempre **opt-in**.
-
----
-
-# Banimento
-
-O projeto não utilizará estados separados como “bloqueado” e “banido”.
-
-Existirão inicialmente:
-
-- usuário ativo;
-- usuário banido.
-
-Um usuário banido continuará podendo acessar e visualizar a plataforma, mas perderá suas permissões de interação.
-
-### Usuário banido pode
-
-- fazer login;
-- visualizar Home;
-- visualizar ocorrências;
-- visualizar Social;
-- visualizar perfis.
-
-### Usuário banido não pode
-
-- denunciar;
-- confirmar ocorrência;
-- votar resolução;
-- publicar;
-- comentar;
-- curtir;
-- seguir;
-- contribuir para reabertura.
-
----
-
-# Perfis internos
-
-## Cidadão
-
-Principal usuário da plataforma.
-
-## Moderador
-
-Responsável pela validação e organização das ocorrências.
-
-## Administrador
-
-Responsável pela administração geral da plataforma.
-
-Haverá somente um nível administrativo.
-
-## Órgãos e responsáveis
-
-No MVP, órgãos públicos e responsáveis privados serão tratados como **destinos de encaminhamento**, não como contas obrigatórias dentro da plataforma.
-
----
-
-# Painel administrativo
-
-O painel administrativo deverá permitir, futuramente:
-
-### Usuários
-
-- pesquisar;
-- visualizar;
-- banir;
-- desbanir;
-- promover moderador;
-- remover moderador.
-
-### Ocorrências
-
-- criar;
-- editar;
-- validar;
-- rejeitar;
-- arquivar;
-- restaurar;
-- resolver;
-- reabrir;
-- remover pins.
-
-### Categorias
-
-- criar;
-- editar;
-- ativar;
-- desativar.
-
-### Órgãos e canais
-
-- cadastrar;
-- editar;
-- ativar;
-- desativar;
-- associar categorias;
-- definir URLs e instruções.
-
-### Sistema
-
-- parâmetros;
-- logs;
-- auditoria;
-- métricas futuras.
-
----
-
-# Notificações
-
-O projeto prevê notificações para eventos como:
-
-- ocorrência validada;
-- ocorrência rejeitada;
-- ocorrência marcada como duplicada;
-- mudança de status;
-- resolução;
-- reabertura;
-- decisões relevantes da moderação.
-
-Canais previstos inicialmente:
-
-- notificações internas;
-- e-mail.
-
-Push notifications poderão ser consideradas posteriormente.
-
----
-
-# Segurança e privacidade
-
-Segurança será tratada como requisito de produto, não como etapa posterior.
-
-Diretrizes previstas:
-
-- HTTPS em produção;
-- hash seguro de senha;
-- controle de acesso por perfil;
-- rate limiting;
-- validação de entrada;
-- proteção contra XSS;
-- proteção contra SQL Injection;
-- validação de uploads;
-- segredos fora do código;
-- auditoria de ações administrativas;
-- proteção adequada de sessões e tokens;
-- minimização de dados pessoais;
-- conformidade com princípios da LGPD.
-
-A plataforma não deverá armazenar continuamente o histórico de movimentação dos usuários.
-
-A localização utilizada para validação de proximidade deverá ser tratada separadamente da localização persistente da ocorrência.
-
----
-
-# Acessibilidade
-
-A acessibilidade faz parte do propósito do projeto e será considerada desde o início.
-
-Objetivos:
-
-- navegação por teclado;
-- contraste adequado;
-- labels acessíveis;
-- textos alternativos;
-- compatibilidade com leitores de tela;
-- interface que não dependa exclusivamente de cores;
-- experiência utilizável em dispositivos móveis.
-
----
-
-# Integrações previstas
-
-O projeto deverá avaliar ou utilizar integrações para:
-
-### Mapas
-
-- OpenStreetMap ou soluções baseadas em seus dados.
-
-### Geocoding
-
-- endereço → coordenadas;
-- coordenadas → endereço.
-
-### Autenticação
-
-- Google;
-- GitHub;
-- outros provedores OIDC/OAuth.
-
-### E-mail
-
-- recuperação de senha;
-- notificações;
-- confirmação de conta, se adotada.
-
-### Armazenamento
-
-- object storage para evidências e imagens.
-
-### Órgãos públicos e privados
-
-Inicialmente:
-
-```text
-encaminhamento assistido
-```
-
-Futuramente, integrações diretas poderão ser avaliadas quando existirem APIs adequadas.
-
----
-
-# Arquitetura
-
-> **Ainda em definição.**
-
-O projeto está passando por uma etapa deliberada de levantamento de requisitos antes da escolha final de arquitetura e stack.
-
-Essa decisão é intencional.
-
-Antes de definir tecnologias, o objetivo é fechar:
-
-1. requisitos;
-2. regras de negócio;
-3. fluxos;
-4. páginas;
-5. MVP;
-6. modelo de domínio.
-
-Somente depois serão consolidados:
-
-- arquitetura;
-- banco de dados;
-- backend;
-- frontend;
-- infraestrutura;
-- observabilidade;
-- CI/CD;
-- estratégia de deploy.
-
----
-
-# Estrutura planejada do produto
-
-```text
-Voz da Rua
-│
-├── Identidade e Acesso
-│
-├── Home / Perto de você
-│
-├── Localização
-│
-├── Fazer denúncia
-│
-├── Ocorrências
-│   ├── Relatos
-│   ├── Evidências
-│   ├── Histórico
-│   └── Resolução
-│
-├── Social
-│   ├── Posts
-│   ├── Comentários
-│   ├── Curtidas
-│   └── Seguidores
-│
-├── Notificações
-│
-├── Moderação
-│
-├── Administração
-│
-└── Encaminhamento
-```
-
----
-
-# Roadmap
-
-## Fase 0 — Produto e requisitos
-
-- [x] Definição inicial do problema
-- [x] Definição dos principais perfis
-- [x] Definição inicial das páginas
-- [x] Regras de localização
-- [x] Fluxo inicial de ocorrências
-- [x] Regras de moderação
-- [x] Home baseada em problemas próximos
-- [x] Definição inicial da área Social
-- [ ] Revisão com a equipe
-- [ ] Fechamento de pontos pendentes
-- [ ] Separação entre MVP e fases posteriores
-
-## Fase 1 — UX e domínio
-
-- [ ] Fluxos finais
-- [ ] Wireframes
-- [ ] Design system
-- [ ] Modelo de domínio
-- [ ] Casos de uso
-- [ ] Contratos principais
-
-## Fase 2 — Arquitetura
-
-- [ ] Definição da stack
-- [ ] Banco de dados
-- [ ] Backend
-- [ ] Frontend
-- [ ] Autenticação
-- [ ] Storage
-- [ ] Infraestrutura
-- [ ] Observabilidade
-- [ ] CI/CD
-
-## Fase 3 — MVP
-
-- [ ] Autenticação
-- [ ] Home / Perto de você
-- [ ] Localização
-- [ ] Criar ocorrência
-- [ ] “Eu também vi”
-- [ ] Detalhes
-- [ ] Minhas ocorrências
-- [ ] Moderação
-- [ ] Canais oficiais
-- [ ] Administração mínima
-
-## Fase 4 — Comunidade
-
-- [ ] Área Social
-- [ ] Perfis públicos
-- [ ] Seguidores
-- [ ] Comentários
-- [ ] Curtidas
-- [ ] Notificações avançadas
-
----
-
-# Status do projeto
-
-O Voz da Rua está atualmente na fase de:
-
-> **levantamento funcional e definição de produto**
-
-Nenhuma stack definitiva deve ser considerada oficial neste momento.
-
-Isso evita que decisões técnicas antigas limitem o novo desenho do produto.
-
----
-
-# Documentação
-
-A documentação do projeto será organizada progressivamente.
-
-Estrutura sugerida:
-
-```text
-docs/
-├── product/
-│   ├── requirements.md
-│   ├── business-rules.md
-│   └── roadmap.md
-│
-├── architecture/
-│   ├── overview.md
-│   └── decisions/
-│
-├── api/
-│
-├── database/
-│
-└── contributing/
-```
-
-O levantamento funcional atual deverá ser convertido e mantido dentro dessa estrutura durante a evolução do repositório.
-
----
-
-# Contribuindo
-
-O processo de contribuição será documentado quando a arquitetura inicial estiver definida.
-
-Futuramente, o projeto deverá possuir:
-
-- `CONTRIBUTING.md`;
-- padrão de commits;
-- convenção de branches;
-- template de Pull Request;
-- templates de Issues;
-- guia de ambiente local;
-- Code of Conduct.
-
-Enquanto o produto estiver em definição, mudanças de regra de negócio devem ser discutidas antes da implementação.
-
----
-
-# Idioma
-
-O projeto será inicialmente desenvolvido para:
-
-```text
-pt-BR
-```
-
-Internacionalização não faz parte do MVP atual.
-
-A arquitetura futura, entretanto, não deverá impedir sua adoção.
-
----
-
-# Licença
-
-A licença do projeto ainda será definida antes da abertura oficial para contribuições externas.
-
-Até que uma licença seja adicionada ao repositório, **nenhum direito de reutilização deve ser presumido**.
-
----
-
-# Aviso
-
-O Voz da Rua é uma iniciativa independente.
-
-A plataforma não representa oficialmente a Prefeitura de São Paulo, SP156, Metrô, CPTM, SPTrans, CET ou qualquer outro órgão público ou entidade privada mencionada.
-
-Links, marcas e nomes de terceiros poderão ser utilizados exclusivamente para identificar os canais responsáveis por determinadas solicitações.
+Distribuído sob a [Apache License 2.0](LICENSE).
 
 ---
 
 <div align="center">
 
-## Voz da Rua
-
-**A cidade, vista por quem vive nela.**
-
-Construído para tornar problemas urbanos mais visíveis, organizados e fáceis de encaminhar.
+**Voz da Rua** — tecnologia cívica para tornar problemas urbanos mais visíveis, verificáveis e encaminháveis.
 
 </div>
